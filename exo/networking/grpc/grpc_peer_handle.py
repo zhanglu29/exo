@@ -2,6 +2,7 @@ import grpc
 import numpy as np
 import asyncio
 from typing import Optional, Tuple, List
+import logging
 
 from . import node_service_pb2
 from . import node_service_pb2_grpc
@@ -30,15 +31,38 @@ class GRPCPeerHandle(PeerHandle):
   def device_capabilities(self) -> DeviceCapabilities:
     return self._device_capabilities
 
+  # async def connect(self):
+  #   if self.channel is None:
+  #     self.channel = grpc.aio.insecure_channel(self.address, options=[
+  #       ("grpc.max_metadata_size", 32*1024*1024),
+  #       ('grpc.max_receive_message_length', 32*1024*1024),
+  #       ('grpc.max_send_message_length', 32*1024*1024)
+  #     ])
+  #     self.stub = node_service_pb2_grpc.NodeServiceStub(self.channel)
+  #   await self.channel.channel_ready()
+
+
   async def connect(self):
     if self.channel is None:
-      self.channel = grpc.aio.insecure_channel(self.address, options=[
-        ("grpc.max_metadata_size", 32*1024*1024),
-        ('grpc.max_receive_message_length', 32*1024*1024),
-        ('grpc.max_send_message_length', 32*1024*1024)
-      ])
-      self.stub = node_service_pb2_grpc.NodeServiceStub(self.channel)
-    await self.channel.channel_ready()
+      try:
+        # 创建 gRPC 通道
+        self.channel = grpc.aio.insecure_channel(self.address, options=[
+          ("grpc.max_metadata_size", 32 * 1024 * 1024),
+          ('grpc.max_receive_message_length', 32 * 1024 * 1024),
+          ('grpc.max_send_message_length', 32 * 1024 * 1024)
+        ])
+
+        # 创建 stub
+        self.stub = node_service_pb2_grpc.NodeServiceStub(self.channel)
+
+        # 等待通道准备就绪
+        await self.channel.channel_ready()
+        logging.info("gRPC channel is ready.")
+
+      except grpc.RpcError as e:
+        logging.error(f"gRPC error: {e.code()} - {e.details()}")
+      except Exception as e:
+        logging.error(f"An unexpected error occurred: {str(e)}")
 
   async def is_connected(self) -> bool:
     return self.channel is not None and self.channel.get_state() == grpc.ChannelConnectivity.READY
