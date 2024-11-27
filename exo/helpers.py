@@ -222,20 +222,42 @@ def pretty_print_bytes_per_second(bytes_per_second: int) -> str:
     return f"{bytes_per_second / (1024 ** 4):.2f} TB/s"
 
 
-def get_all_ip_addresses():
-  try:
-    ip_addresses = []
-    for interface in netifaces.interfaces():
-      ifaddresses = netifaces.ifaddresses(interface)
-      if netifaces.AF_INET in ifaddresses:
-        for link in ifaddresses[netifaces.AF_INET]:
-          ip = link['addr']
-          ip_addresses.append(ip)
-    return list(set(ip_addresses))
-  except:
-    if DEBUG >= 1: print("Failed to get all IP addresses. Defaulting to localhost.")
-    return ["localhost"]
+# def get_all_ip_addresses():
+#   try:
+#     ip_addresses = []
+#     for interface in netifaces.interfaces():
+#       ifaddresses = netifaces.ifaddresses(interface)
+#       if netifaces.AF_INET in ifaddresses:
+#         for link in ifaddresses[netifaces.AF_INET]:
+#           ip = link['addr']
+#           ip_addresses.append(ip)
+#     return list(set(ip_addresses))
+#   except:
+#     if DEBUG >= 1: print("Failed to get all IP addresses. Defaulting to localhost.")
+#     return ["localhost"]
 
+def get_all_ip_addresses():
+  """获取本地机器的所有 IP 地址"""
+  ip_addresses = set()  # 使用集合以避免重复
+
+  # 添加 localhost
+  ip_addresses.add("127.0.0.1")
+
+  # 获取所有本地 IP 地址
+  hostname = socket.gethostname()  # 获取本地主机名
+  local_ip = socket.gethostbyname(hostname)  # 获取主机名对应的 IP 地址
+  ip_addresses.add(local_ip)
+
+  # 创建一个临时的 socket 连接
+  try:
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))  # 连接到一个外部地址（不需要实际连接）
+    ip_addresses.add(s.getsockname()[0])  # 添加当前的连接 IP 地址
+    s.close()
+  except Exception as e:
+    print(f"Error while getting IP address: {e}")
+
+  return list(ip_addresses)
 
 async def shutdown(signal, loop, server):
   """Gracefully shutdown the server and close the asyncio loop."""
