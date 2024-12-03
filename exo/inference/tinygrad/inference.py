@@ -22,78 +22,127 @@ TOP_P = 0.9
 ALPHA_F = 0.1
 ALPHA_P = 0.0
 MODEL_PARAMS = {
-  "1B": {
-    "args": {
-      "dim": 2048, "n_heads": 32, "n_kv_heads": 8, "n_layers": 16, "norm_eps": 1e-5, "rope_theta": 500000, "vocab_size": 128256, "hidden_dim": 8192,
-      "rope_scaling": {"factor": 32.0, "high_freq_factor": 4.0, "low_freq_factor": 1.0, "original_max_position_embeddings": 8192, "rope_type": "llama3"}, "tie_word_embeddings": True
-    }, "files": 1
-  }, "3B": {
-    "args": {
-      "dim": 3072, "n_heads": 24, "n_kv_heads": 8, "n_layers": 28, "norm_eps": 1e-5, "rope_theta": 500000, "vocab_size": 128256, "hidden_dim": 8192,
-      "rope_scaling": {"factor": 32.0, "high_freq_factor": 4.0, "low_freq_factor": 1.0, "original_max_position_embeddings": 8192, "rope_type": "llama3"}, "tie_word_embeddings": True
-    }, "files": 1
-  }, "8B": {"args": {"dim": 4096, "n_heads": 32, "n_kv_heads": 8, "n_layers": 32, "norm_eps": 1e-5, "rope_theta": 500000, "vocab_size": 128256, "hidden_dim": 14336}, "files": 1},
-  "70B": {"args": {"dim": 8192, "n_heads": 64, "n_kv_heads": 8, "n_layers": 80, "norm_eps": 1e-5, "rope_theta": 500000, "vocab_size": 128256, "hidden_dim": 28672}, "files": 8}
+    "1B": {
+        "args": {
+            "dim": 2048, "n_heads": 32, "n_kv_heads": 8, "n_layers": 16, "norm_eps": 1e-5, "rope_theta": 500000,
+            "vocab_size": 128256, "hidden_dim": 8192,
+            "rope_scaling": {"factor": 32.0, "high_freq_factor": 4.0, "low_freq_factor": 1.0,
+                             "original_max_position_embeddings": 8192, "rope_type": "llama3"},
+            "tie_word_embeddings": True
+        }, "files": 1
+    },
+    "3B": {
+        "args": {
+            "dim": 3072, "n_heads": 24, "n_kv_heads": 8, "n_layers": 28, "norm_eps": 1e-5, "rope_theta": 500000,
+            "vocab_size": 128256, "hidden_dim": 8192,
+            "rope_scaling": {"factor": 32.0, "high_freq_factor": 4.0, "low_freq_factor": 1.0,
+                             "original_max_position_embeddings": 8192, "rope_type": "llama3"},
+            "tie_word_embeddings": True
+        }, "files": 1
+    },
+    "8B": {
+        "args": {
+            "dim": 4096, "n_heads": 32, "n_kv_heads": 8, "n_layers": 32, "norm_eps": 1e-5, "rope_theta": 500000,
+            "vocab_size": 128256, "hidden_dim": 14336
+        }, "files": 1
+    },
+    "70B": {
+        "args": {
+            "dim": 8192, "n_heads": 64, "n_kv_heads": 8, "n_layers": 80, "norm_eps": 1e-5, "rope_theta": 500000,
+            "vocab_size": 128256, "hidden_dim": 28672
+        }, "files": 8
+    }
 }
 
 
 def build_transformer(model_path: Path, shard: Shard, model_size="8B", device=None):
-  # build model
-  linear = nn.Linear
-  model = Transformer(**MODEL_PARAMS[model_size]["args"], linear=linear, max_context=8192, jit=True, shard=shard)
+    try:
+        # build model
+        linear = nn.Linear
+        model = Transformer(**MODEL_PARAMS[model_size]["args"], linear=linear, max_context=8192, jit=True, shard=shard)
 
-  # load weights
-  if model_path.is_dir():
-    if (model_path/"model.safetensors.index.json").exists(): weights = load(str(model_path/"model.safetensors.index.json"), shard)
-    elif (model_path/"model.safetensors").exists(): weights = load(str(model_path/"model.safetensors"), shard)
-    else: weights = concat_weights([load(str(model_path/f"consolidated.{i:02d}.pth"), shard) for i in range(MODEL_PARAMS[model_size]["files"])], device[0] if isinstance(device, tuple) else device)
-  else:
-    weights = load(str(model_path), shard)
-  weights = convert_from_huggingface(weights, model, MODEL_PARAMS[model_size]["args"]["n_heads"], MODEL_PARAMS[model_size]["args"]["n_kv_heads"])
-  weights = fix_bf16(weights)
+        # load weights
+        if model_path.is_dir():
+            if (model_path / "model.safetensors.index.json").exists():
+                weights = load(str(model_path / "model.safetensors.index.json"), shard)
+            elif (model_path / "model.safetensors").exists():
+                weights = load(str(model_path / "model.safetensors"), shard)
+            else:
+                weights = concat_weights([load(str(model_path / f"consolidated.{i:02d}.pth"), shard) for i in
+                                          range(MODEL_PARAMS[model_size]["files"])],
+                                         device[0] if isinstance(device, tuple) else device)
+        else:
+            weights = load(str(model_path), shard)
 
-  with Context(BEAM=0):
-    # replace weights in model
-    load_state_dict(model, weights, strict=False, consume=False)  # consume=True
-  return model
+        weights = convert_from_huggingface(weights, model, MODEL_PARAMS[model_size]["args"]["n_heads"],
+                                           MODEL_PARAMS[model_size]["args"]["n_kv_heads"])
+        weights = fix_bf16(weights)
+
+        with Context(BEAM=0):
+            # replace weights in model
+            load_state_dict(model, weights, strict=False, consume=False)  # consume=True
+        return model
+    except Exception as e:
+        print(f"Error in build_transformer: {e}")
+
 
 class TinygradDynamicShardInferenceEngine(InferenceEngine):
-  def __init__(self, shard_downloader: ShardDownloader):
-    self.shard = None
-    self.shard_downloader = shard_downloader
-    self.executor = ThreadPoolExecutor(max_workers=1)
+    def __init__(self, shard_downloader: ShardDownloader):
+        self.shard = None
+        self.shard_downloader = shard_downloader
+        self.executor = ThreadPoolExecutor(max_workers=1)
 
-  async def sample(self, x: np.ndarray, temp=TEMPERATURE, top_p: float = 0.0) -> np.ndarray:
-    logits = x[:, -1, :]
-    def sample_wrapper():
-      return sample_logits(Tensor(logits).flatten(), temp, 0, 0.8, top_p, 0.0).realize().numpy().astype(int)
-    return await asyncio.get_running_loop().run_in_executor(self.executor, sample_wrapper)
+    async def sample(self, x: np.ndarray, temp=TEMPERATURE, top_p: float = 0.0) -> np.ndarray:
+        try:
+            logits = x[:, -1, :]
 
-  async def encode(self, shard: Shard, prompt: str) -> np.ndarray:
-    await self.ensure_shard(shard)
-    tokens = await asyncio.get_running_loop().run_in_executor(self.executor, self.tokenizer.encode, prompt)
-    return await asyncio.get_running_loop().run_in_executor(self.executor, np.array, tokens)
-  
-  async def decode(self, shard: Shard, tokens) -> str:
-    await self.ensure_shard(shard)
-    return await asyncio.get_running_loop().run_in_executor(self.executor, self.tokenizer.decode, tokens)
+            def sample_wrapper():
+                return sample_logits(Tensor(logits).flatten(), temp, 0, 0.8, top_p, 0.0).realize().numpy().astype(int)
 
-  async def infer_tensor(self, request_id: str, shard: Shard, input_data: np.ndarray) -> np.ndarray:
-    await self.ensure_shard(shard)
-    return await asyncio.get_running_loop().run_in_executor(self.executor, lambda: self.model(Tensor(input_data), request_id).realize().numpy())
+            return await asyncio.get_running_loop().run_in_executor(self.executor, sample_wrapper)
+        except Exception as e:
+            print(f"Error in sample: {e}")
 
-  async def ensure_shard(self, shard: Shard):
-    if self.shard == shard:
-      return
+    async def encode(self, shard: Shard, prompt: str) -> np.ndarray:
+        try:
+            await self.ensure_shard(shard)
+            tokens = await asyncio.get_running_loop().run_in_executor(self.executor, self.tokenizer.encode, prompt)
+            return await asyncio.get_running_loop().run_in_executor(self.executor, np.array, tokens)
+        except Exception as e:
+            print(f"Error in encode: {e}")
 
-    model_path = await self.shard_downloader.ensure_shard(shard, self.__class__.__name__)
-    print("【zhanglu】","[001]", model_path)
-    if self.shard != shard:
-      loop = asyncio.get_running_loop()
-      parameters = "1B" if "1b" in shard.model_id.lower() else "3B" if "3b" in shard.model_id.lower() else "8B" if "8b" in shard.model_id.lower() else "70B"
-      model_shard = await loop.run_in_executor(self.executor, build_transformer, model_path, shard, parameters)
+    async def decode(self, shard: Shard, tokens) -> str:
+        try:
+            await self.ensure_shard(shard)
+            return await asyncio.get_running_loop().run_in_executor(self.executor, self.tokenizer.decode, tokens)
+        except Exception as e:
+            print(f"Error in decode: {e}")
 
-      tokenizer_path = str((model_path if model_path.is_dir() else model_path.parent))
-      self.tokenizer = await resolve_tokenizer(tokenizer_path)
-      self.shard = shard
-      self.model = await loop.run_in_executor(self.executor, StatefulModel, model_shard) 
+    async def infer_tensor(self, request_id: str, shard: Shard, input_data: np.ndarray) -> np.ndarray:
+        try:
+            await self.ensure_shard(shard)
+            return await asyncio.get_running_loop().run_in_executor(self.executor,
+                                                                    lambda: self.model(Tensor(input_data),
+                                                                                       request_id).realize().numpy())
+        except Exception as e:
+            print(f"Error in infer_tensor: {e}")
+
+    async def ensure_shard(self, shard: Shard):
+        try:
+            if self.shard == shard:
+                return
+
+            model_path = await self.shard_downloader.ensure_shard(shard, self.__class__.__name__)
+            print("【zhanglu】", "[001]", model_path)
+            if self.shard != shard:
+                loop = asyncio.get_running_loop()
+                parameters = "1B" if "1b" in shard.model_id.lower() else "3B" if "3b" in shard.model_id.lower() else "8B" if "8b" in shard.model_id.lower() else "70B"
+                model_shard = await loop.run_in_executor(self.executor, build_transformer, model_path, shard,
+                                                         parameters)
+
+                tokenizer_path = str((model_path if model_path.is_dir() else model_path.parent))
+                self.tokenizer = await resolve_tokenizer(tokenizer_path)
+                self.shard = shard
+                self.model = await loop.run_in_executor(self.executor, StatefulModel, model_shard)
+        except Exception as e:
+            print(f"Error in ensure_shard: {e}")
