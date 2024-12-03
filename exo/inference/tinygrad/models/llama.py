@@ -2,94 +2,96 @@ from typing import Tuple, Union, Optional, Dict, Any, List
 from tinygrad import Tensor, Variable, TinyJit, dtypes, nn, Device
 from tinygrad.helpers import getenv
 from collections import OrderedDict
-
-
-def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0, dtype=dtypes.half,
-                         rope_scaling: Optional[Dict[str, float]] = None) -> Tensor:
-    print("【DEBUG 1】Entering precompute_freqs_cis")
-    freqs = 1.0 / (theta ** (Tensor.arange(0, dim, 2)[:(dim // 2)] / dim))
-
-    if rope_scaling:
-        print("【DEBUG 2】Applying rope scaling")
-        factor = rope_scaling.get('factor', 1.0)
-        low_freq_factor = rope_scaling.get('low_freq_factor', 1.0)
-        high_freq_factor = rope_scaling.get('high_freq_factor', 1.0)
-        original_max_pos_emb = rope_scaling.get('original_max_position_embeddings', end)
-
-        # 打印低频部分的具体值
-        print(f"【DEBUG】Before applying low_freq_factor: {freqs[:dim // 4]}, shape: {freqs[:dim // 4].shape}")
-        print(f"【DEBUG】low_freq_factor: {low_freq_factor}")
-        # 打印为 NumPy 数组
-        print("freqs Tensor 数据:", freqs.numpy())
-        freqs[:dim // 4] *= low_freq_factor
-
-
-        freqs[dim // 4:] = freqs[dim // 4:].contiguous() * high_freq_factor
-        freqs *= (original_max_pos_emb / end) ** (1.0 / factor)
-
-    freqs = Tensor.arange(end).unsqueeze(dim=1) * freqs.unsqueeze(dim=0)
-    print("【DEBUG 3】Exiting precompute_freqs_cis")
-    return Tensor.stack(freqs.cos().cast(dtype), freqs.sin().cast(dtype), dim=-1).reshape(1, end, 1, dim // 2, 2)
-# from tinygrad import Tensor
-# from typing import Optional, Dict
-
-# def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0, dtype=None,
+#
+#
+# def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0, dtype=dtypes.half,
 #                          rope_scaling: Optional[Dict[str, float]] = None) -> Tensor:
 #     print("【DEBUG 1】Entering precompute_freqs_cis")
+#     freqs = 1.0 / (theta ** (Tensor.arange(0, dim, 2)[:(dim // 2)] / dim))
 #
-#     try:
-#         freqs = 1.0 / (theta ** (Tensor.arange(0, dim, 2)[:(dim // 2)] / dim))
-#         print(f"【DEBUG】Initial freqs: {freqs}, shape: {freqs.shape}")
+#     if rope_scaling:
+#         print("【DEBUG 2】Applying rope scaling")
+#         factor = rope_scaling.get('factor', 1.0)
+#         low_freq_factor = rope_scaling.get('low_freq_factor', 1.0)
+#         high_freq_factor = rope_scaling.get('high_freq_factor', 1.0)
+#         original_max_pos_emb = rope_scaling.get('original_max_position_embeddings', end)
 #
-#         # 打印 freqs 的具体值
-#         print(f"【DEBUG】freqs具体值: {freqs.data}")  # 这里假设 `data` 属性包含实际值
+#         # 打印低频部分的具体值
+#         print(f"【DEBUG】Before applying low_freq_factor: {freqs[:dim // 4]}, shape: {freqs[:dim // 4].shape}")
+#         print(f"【DEBUG】low_freq_factor: {low_freq_factor}")
+#         # 打印为 NumPy 数组
+#         print("freqs Tensor 数据:", freqs.numpy())
+#         freqs[:dim // 4] *= low_freq_factor
 #
-#         if rope_scaling:
-#             print("【DEBUG 2】Applying rope scaling")
-#             factor = rope_scaling.get('factor', 1.0)
-#             low_freq_factor = rope_scaling.get('low_freq_factor', 1.0)
-#             high_freq_factor = rope_scaling.get('high_freq_factor', 1.0)
-#             original_max_pos_emb = rope_scaling.get('original_max_position_embeddings', end)
 #
-#             print("【DEBUG】freqs before scaling: ", freqs.data)
-#             freqs[:dim // 4] *= low_freq_factor
-#             print("【DEBUG】freqs after low_freq scaling: ", freqs.data)
+#         freqs[dim // 4:] = freqs[dim // 4:].contiguous() * high_freq_factor
+#         freqs *= (original_max_pos_emb / end) ** (1.0 / factor)
 #
-#             freqs[dim // 4:] = freqs[dim // 4:].contiguous() * high_freq_factor
-#             print("【DEBUG】freqs after high_freq scaling: ", freqs.data)
-#
-#             freqs *= (original_max_pos_emb / end) ** (1.0 / factor)
-#             print("【DEBUG】freqs after original max position scaling: ", freqs.data)
-#
-#         try:
-#             # 创建范围张量
-#             arange_tensor = Tensor.arange(end)
-#             print(f"【DEBUG】arange_tensor: {arange_tensor}, shape: {arange_tensor.shape}")
-#
-#             # 扩展维度
-#             unsqueezed_arange = arange_tensor.unsqueeze(dim=1)
-#             print(f"【DEBUG】unsqueezed_arange: {unsqueezed_arange}, shape: {unsqueezed_arange.shape}")
-#
-#             # 扩展 freq 维度
-#             unsqueezed_freqs = freqs.unsqueeze(dim=0)
-#             print(f"【DEBUG】unsqueezed_freqs: {unsqueezed_freqs}, shape: {unsqueezed_freqs.shape}")
-#
-#             # 执行乘法
-#             freqs = unsqueezed_arange * unsqueezed_freqs
-#             print(f"【DEBUG】freqs after multiplication: {freqs}, shape: {freqs.shape}")
-#             print(f"【DEBUG】freqs具体值: {freqs.data}")
-#
-#         except Exception as e:
-#             print(f"【ERROR】Exception in computing freqs: {e}")
-#             print(f"【DEBUG】Variables at error: dim: {dim}, end: {end}, freqs shape: {freqs.shape if 'freqs' in locals() else 'not defined'}")
-#             raise
-#
-#         print("【DEBUG 3】Exiting precompute_freqs_cis")
-#         return Tensor.stack(freqs.cos().cast(dtype), freqs.sin().cast(dtype), dim=-1).reshape(1, end, 1, dim // 2, 2)
-#
-#     except Exception as e:
-#         print(f"【ERROR】Exception in precompute_freqs_cis: {e}")
-#         raise
+#     freqs = Tensor.arange(end).unsqueeze(dim=1) * freqs.unsqueeze(dim=0)
+#     print("【DEBUG 3】Exiting precompute_freqs_cis")
+#     return Tensor.stack(freqs.cos().cast(dtype), freqs.sin().cast(dtype), dim=-1).reshape(1, end, 1, dim // 2, 2)
+# # from tinygrad import Tensor
+# # from typing import Optional, Dict
+
+def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0, dtype=None,
+                         rope_scaling: Optional[Dict[str, float]] = None) -> Tensor:
+    print("【DEBUG 1】Entering precompute_freqs_cis")
+
+    try:
+        freqs = 1.0 / (theta ** (Tensor.arange(0, dim, 2)[:(dim // 2)] / dim))
+        print(f"【DEBUG】Initial freqs: {freqs}, shape: {freqs.shape}")
+
+        # 打印 freqs 的具体值
+        print(f"【DEBUG】freqs具体值: {freqs.data}")  # 这里假设 `data` 属性包含实际值
+
+        if rope_scaling:
+            print("【DEBUG 2】Applying rope scaling")
+            factor = rope_scaling.get('factor', 1.0)
+            low_freq_factor = rope_scaling.get('low_freq_factor', 1.0)
+            high_freq_factor = rope_scaling.get('high_freq_factor', 1.0)
+            original_max_pos_emb = rope_scaling.get('original_max_position_embeddings', end)
+
+            print("【DEBUG】freqs before scaling: ", freqs.data)
+            print("freqs Tensor 数据:", freqs.numpy())
+
+            freqs[:dim // 4] *= low_freq_factor
+            print("【DEBUG】freqs after low_freq scaling: ", freqs.data)
+
+            freqs[dim // 4:] = freqs[dim // 4:].contiguous() * high_freq_factor
+            print("【DEBUG】freqs after high_freq scaling: ", freqs.data)
+
+            freqs *= (original_max_pos_emb / end) ** (1.0 / factor)
+            print("【DEBUG】freqs after original max position scaling: ", freqs.data)
+
+        try:
+            # 创建范围张量
+            arange_tensor = Tensor.arange(end)
+            print(f"【DEBUG】arange_tensor: {arange_tensor}, shape: {arange_tensor.shape}")
+
+            # 扩展维度
+            unsqueezed_arange = arange_tensor.unsqueeze(dim=1)
+            print(f"【DEBUG】unsqueezed_arange: {unsqueezed_arange}, shape: {unsqueezed_arange.shape}")
+
+            # 扩展 freq 维度
+            unsqueezed_freqs = freqs.unsqueeze(dim=0)
+            print(f"【DEBUG】unsqueezed_freqs: {unsqueezed_freqs}, shape: {unsqueezed_freqs.shape}")
+
+            # 执行乘法
+            freqs = unsqueezed_arange * unsqueezed_freqs
+            print(f"【DEBUG】freqs after multiplication: {freqs}, shape: {freqs.shape}")
+            print(f"【DEBUG】freqs具体值: {freqs.data}")
+
+        except Exception as e:
+            print(f"【ERROR】Exception in computing freqs: {e}")
+            print(f"【DEBUG】Variables at error: dim: {dim}, end: {end}, freqs shape: {freqs.shape if 'freqs' in locals() else 'not defined'}")
+            raise
+
+        print("【DEBUG 3】Exiting precompute_freqs_cis")
+        return Tensor.stack(freqs.cos().cast(dtype), freqs.sin().cast(dtype), dim=-1).reshape(1, end, 1, dim // 2, 2)
+
+    except Exception as e:
+        print(f"【ERROR】Exception in precompute_freqs_cis: {e}")
+        raise
 
 def complex_mult(A, c, d):
     print("【DEBUG 1】Entering complex_mult")
