@@ -35,13 +35,17 @@ def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0, dtype=dtype
             print("【DEBUG 2】Applying rope scaling")
             factor = rope_scaling.get('factor', 1.0)
             low_freq_factor = rope_scaling.get('low_freq_factor', 1.0)
+            print("【DEBUG 4】Applying rope scaling")
             high_freq_factor = rope_scaling.get('high_freq_factor', 1.0)
+            print("【DEBUG 5】Applying rope scaling")
             original_max_pos_emb = rope_scaling.get('original_max_position_embeddings', end)
-
+            print("【DEBUG 6】Applying rope scaling")
             freqs[:dim // 4] *= low_freq_factor
+            print("【DEBUG 7】Applying rope scaling")
             freqs[dim // 4:] = freqs[dim // 4:].contiguous() * high_freq_factor
+            print("【DEBUG 8】Applying rope scaling")
             freqs *= (original_max_pos_emb / end) ** (1.0 / factor)
-
+            print("【DEBUG 10】Applying rope scaling")
         # 拆分每一步并打印值
         try:
             # 创建范围张量
