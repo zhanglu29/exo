@@ -40,7 +40,10 @@ def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0, dtype=dtype
             print("【DEBUG 5】Applying rope scaling")
             original_max_pos_emb = rope_scaling.get('original_max_position_embeddings', end)
             print("【DEBUG 6】Applying rope scaling")
+
+            print("【DEBUG 6.1】Applying rope scaling", freqs, dim, low_freq_factor)
             freqs[:dim // 4] *= low_freq_factor
+
             print("【DEBUG 7】Applying rope scaling")
             freqs[dim // 4:] = freqs[dim // 4:].contiguous() * high_freq_factor
             print("【DEBUG 8】Applying rope scaling")
