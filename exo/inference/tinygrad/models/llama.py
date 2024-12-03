@@ -44,7 +44,9 @@ def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0, dtype=None,
         freqs = 1.0 / (theta ** (Tensor.arange(0, dim, 2)[:(dim // 2)] / dim))
         print(f"【DEBUG】Initial freqs: {freqs}, shape: {freqs.shape}")
 
-        print(f"【DEBUG】freqs具体值: {freqs.tolist()}")
+        print(f"【DEBUG】freqs 前五值: {freqs[:5]}")
+
+        # print(f"【DEBUG】freqs具体值: {freqs.tolist()}")
         # 打印 freqs 的具体值
         # print(f"【DEBUG】freqs具体值: {freqs.tolist() if hasattr(freqs, 'numpy') else freqs}")
 
