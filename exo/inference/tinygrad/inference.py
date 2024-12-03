@@ -57,13 +57,17 @@ MODEL_PARAMS = {
 
 def build_transformer(model_path: Path, shard: Shard, model_size="8B", device=None):
     try:
+
+        print("【zhanglu】", "build_transformer [001]")
         # build model
         linear = nn.Linear
         model = Transformer(**MODEL_PARAMS[model_size]["args"], linear=linear, max_context=8192, jit=True, shard=shard)
-
+        print("【zhanglu】", "build_transformer [002]")
         # load weights
         if model_path.is_dir():
+            print("【zhanglu】", "build_transformer [003]")
             if (model_path / "model.safetensors.index.json").exists():
+                print("【zhanglu】", "build_transformer [004]")
                 weights = load(str(model_path / "model.safetensors.index.json"), shard)
             elif (model_path / "model.safetensors").exists():
                 weights = load(str(model_path / "model.safetensors"), shard)
@@ -77,7 +81,7 @@ def build_transformer(model_path: Path, shard: Shard, model_size="8B", device=No
         weights = convert_from_huggingface(weights, model, MODEL_PARAMS[model_size]["args"]["n_heads"],
                                            MODEL_PARAMS[model_size]["args"]["n_kv_heads"])
         weights = fix_bf16(weights)
-
+        print("【zhanglu】", "build_transformer [007]")
         with Context(BEAM=0):
             # replace weights in model
             load_state_dict(model, weights, strict=False, consume=False)  # consume=True
