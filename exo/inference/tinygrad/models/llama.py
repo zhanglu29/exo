@@ -52,7 +52,7 @@ def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0, dtype=None,
             original_max_pos_emb = rope_scaling.get('original_max_position_embeddings', end)
 
             print("【DEBUG】freqs before scaling: ", freqs.data)
-            print("freqs Tensor 数据:", freqs.numpy())
+            print("freqs Tensor 数据:", freqs.grad.tolist())
 
             freqs[:dim // 4] *= low_freq_factor
             print("【DEBUG】freqs after low_freq scaling: ", freqs.data)
