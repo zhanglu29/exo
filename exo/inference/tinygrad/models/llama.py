@@ -41,7 +41,9 @@ def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0, dtype=dtype
             original_max_pos_emb = rope_scaling.get('original_max_position_embeddings', end)
             print("【DEBUG 6】Applying rope scaling")
 
-            print("【DEBUG 6.1】Applying rope scaling", freqs, dim, low_freq_factor)
+            print("【DEBUG 6.1】Applying rope scaling")
+            print(f"【DEBUG】freqs before scaling: {freqs}, shape: {freqs.shape}")
+            print(f"【DEBUG】dim: {dim}, low_freq_factor: {low_freq_factor}")
             freqs[:dim // 4] *= low_freq_factor
 
             print("【DEBUG 7】Applying rope scaling")
