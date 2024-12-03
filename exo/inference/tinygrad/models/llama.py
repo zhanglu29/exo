@@ -33,6 +33,9 @@ from collections import OrderedDict
 # # from tinygrad import Tensor
 # # from typing import Optional, Dict
 
+from tinygrad import Tensor
+from typing import Optional, Dict
+
 def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0, dtype=None,
                          rope_scaling: Optional[Dict[str, float]] = None) -> Tensor:
     print("【DEBUG 1】Entering precompute_freqs_cis")
@@ -42,7 +45,7 @@ def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0, dtype=None,
         print(f"【DEBUG】Initial freqs: {freqs}, shape: {freqs.shape}")
 
         # 打印 freqs 的具体值
-        print(f"【DEBUG】freqs具体值: {freqs.data}")  # 这里假设 `data` 属性包含实际值
+        print(f"【DEBUG】freqs具体值: {freqs.numpy() if hasattr(freqs, 'numpy') else freqs}")
 
         if rope_scaling:
             print("【DEBUG 2】Applying rope scaling")
@@ -51,35 +54,34 @@ def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0, dtype=None,
             high_freq_factor = rope_scaling.get('high_freq_factor', 1.0)
             original_max_pos_emb = rope_scaling.get('original_max_position_embeddings', end)
 
-            print("【DEBUG】freqs before scaling: ", freqs.data)
-            print("freqs Tensor 数据:", freqs.grad.tolist())
+            print("【DEBUG】freqs before scaling: ", freqs.numpy() if hasattr(freqs, 'numpy') else freqs)
 
             freqs[:dim // 4] *= low_freq_factor
-            print("【DEBUG】freqs after low_freq scaling: ", freqs.data)
+            print("【DEBUG】freqs after low_freq scaling: ", freqs.numpy() if hasattr(freqs, 'numpy') else freqs)
 
             freqs[dim // 4:] = freqs[dim // 4:].contiguous() * high_freq_factor
-            print("【DEBUG】freqs after high_freq scaling: ", freqs.data)
+            print("【DEBUG】freqs after high_freq scaling: ", freqs.numpy() if hasattr(freqs, 'numpy') else freqs)
 
             freqs *= (original_max_pos_emb / end) ** (1.0 / factor)
-            print("【DEBUG】freqs after original max position scaling: ", freqs.data)
+            print("【DEBUG】freqs after original max position scaling: ", freqs.numpy() if hasattr(freqs, 'numpy') else freqs)
 
         try:
             # 创建范围张量
             arange_tensor = Tensor.arange(end)
-            print(f"【DEBUG】arange_tensor: {arange_tensor}, shape: {arange_tensor.shape}")
+            print(f"【DEBUG】arange_tensor: {arange_tensor.numpy() if hasattr(arange_tensor, 'numpy') else arange_tensor}, shape: {arange_tensor.shape}")
 
             # 扩展维度
             unsqueezed_arange = arange_tensor.unsqueeze(dim=1)
-            print(f"【DEBUG】unsqueezed_arange: {unsqueezed_arange}, shape: {unsqueezed_arange.shape}")
+            print(f"【DEBUG】unsqueezed_arange: {unsqueezed_arange.numpy() if hasattr(unsqueezed_arange, 'numpy') else unsqueezed_arange}, shape: {unsqueezed_arange.shape}")
 
             # 扩展 freq 维度
             unsqueezed_freqs = freqs.unsqueeze(dim=0)
-            print(f"【DEBUG】unsqueezed_freqs: {unsqueezed_freqs}, shape: {unsqueezed_freqs.shape}")
+            print(f"【DEBUG】unsqueezed_freqs: {unsqueezed_freqs.numpy() if hasattr(unsqueezed_freqs, 'numpy') else unsqueezed_freqs}, shape: {unsqueezed_freqs.shape}")
 
             # 执行乘法
             freqs = unsqueezed_arange * unsqueezed_freqs
-            print(f"【DEBUG】freqs after multiplication: {freqs}, shape: {freqs.shape}")
-            print(f"【DEBUG】freqs具体值: {freqs.data}")
+            print(f"【DEBUG】freqs after multiplication: {freqs.numpy() if hasattr(freqs, 'numpy') else freqs}, shape: {freqs.shape}")
+            print(f"【DEBUG】freqs具体值: {freqs.numpy() if hasattr(freqs, 'numpy') else freqs}")
 
         except Exception as e:
             print(f"【ERROR】Exception in computing freqs: {e}")
