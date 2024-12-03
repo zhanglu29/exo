@@ -57,21 +57,25 @@ def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0, dtype=None,
             high_freq_factor = rope_scaling.get('high_freq_factor', 1.0)
             original_max_pos_emb = rope_scaling.get('original_max_position_embeddings', end)
 
-            print("【DEBUG】freqs before scaling: ", freqs.numpy() if hasattr(freqs, 'numpy') else freqs)
+            # print("【DEBUG】freqs before scaling: ", freqs.numpy() if hasattr(freqs, 'numpy') else freqs)
 
             # freqs[:dim // 4] *= low_freq_factor
             #
+            print("【DEBUG 11】Applying rope scaling")
             lower_freqs = freqs[:dim // 4] * low_freq_factor
+            print("【DEBUG 12】Applying rope scaling")
             higher_freqs = freqs[dim // 4:].contiguous() * high_freq_factor
-
+            print("【DEBUG 13】Applying rope scaling")
             # 使用cat或concatenate合并
             freqs = Tensor.cat([lower_freqs, higher_freqs])
+            print("【DEBUG 14】Applying rope scaling")
             print("【DEBUG】freqs after low_freq scaling: ", freqs.numpy() if hasattr(freqs, 'numpy') else freqs)
 
             # freqs[dim // 4:] = freqs[dim // 4:].contiguous() * high_freq_factor
             # print("【DEBUG】freqs after high_freq scaling: ", freqs.numpy() if hasattr(freqs, 'numpy') else freqs)
 
             freqs *= (original_max_pos_emb / end) ** (1.0 / factor)
+            print("【DEBUG 15】Applying rope scaling")
             print("【DEBUG】freqs after original max position scaling: ", freqs.numpy() if hasattr(freqs, 'numpy') else freqs)
 
         try:
