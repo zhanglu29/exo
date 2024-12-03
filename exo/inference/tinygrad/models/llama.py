@@ -23,13 +23,13 @@ from collections import OrderedDict
 #     freqs = Tensor.arange(end).unsqueeze(dim=1) * freqs.unsqueeze(dim=0)
 #     print("【DEBUG 3】Exiting precompute_freqs_cis")
 #     return Tensor.stack(freqs.cos().cast(dtype), freqs.sin().cast(dtype), dim=-1).reshape(1, end, 1, dim // 2, 2)
-
 def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0, dtype=dtypes.half,
                          rope_scaling: Optional[Dict[str, float]] = None) -> Tensor:
     print("【DEBUG 1】Entering precompute_freqs_cis")
 
     try:
         freqs = 1.0 / (theta ** (Tensor.arange(0, dim, 2)[:(dim // 2)] / dim))
+        print(f"【DEBUG】Initial freqs: {freqs}, shape: {freqs.shape}")
 
         if rope_scaling:
             print("【DEBUG 2】Applying rope scaling")
@@ -45,6 +45,8 @@ def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0, dtype=dtype
         # 拆分每一步并打印值
         try:
             # 创建范围张量
+            print("Tensor[zhanglu001]", end)
+            print("Tensor[002]", Tensor.arange(end))
             arange_tensor = Tensor.arange(end)
             print(f"【DEBUG】arange_tensor: {arange_tensor}, shape: {arange_tensor.shape}")
 
@@ -61,9 +63,9 @@ def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0, dtype=dtype
             print(f"【DEBUG】freqs after multiplication: {freqs}, shape: {freqs.shape}")
 
         except Exception as e:
+            # 捕获异常并打印错误信息及所有变量
             print(f"【ERROR】Exception in computing freqs: {e}")
-            print(
-                f"【DEBUG】end: {end}, arange_tensor shape: {arange_tensor.shape if 'arange_tensor' in locals() else 'not defined'}, freqs shape: {freqs.shape if 'freqs' in locals() else 'not defined'}")
+            print(f"【DEBUG】Variables at error: dim: {dim}, end: {end}, freqs shape: {freqs.shape if 'freqs' in locals() else 'not defined'}")
             raise  # 重新抛出异常以便进一步处理
 
         print("【DEBUG 3】Exiting precompute_freqs_cis")
@@ -72,7 +74,6 @@ def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0, dtype=dtype
     except Exception as e:
         print(f"【ERROR】Exception in precompute_freqs_cis: {e}")
         raise  # 重新抛出异常以便进一步处理
-
 
 def complex_mult(A, c, d):
     print("【DEBUG 1】Entering complex_mult")
