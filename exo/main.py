@@ -258,6 +258,7 @@ def run():
   except KeyboardInterrupt:
     print("Received keyboard interrupt. Shutting down...")
   finally:
+    print("【zhanglu】", "004", signal.SIGTERM)
     loop.run_until_complete(shutdown(signal.SIGTERM, loop, node.server))
     loop.close()
 
