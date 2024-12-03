@@ -19,6 +19,8 @@ def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0, dtype=dtype
         # 打印低频部分的具体值
         print(f"【DEBUG】Before applying low_freq_factor: {freqs[:dim // 4]}, shape: {freqs[:dim // 4].shape}")
         print(f"【DEBUG】low_freq_factor: {low_freq_factor}")
+        # 打印为 NumPy 数组
+        print("freqs Tensor 数据:", freqs.numpy())
         freqs[:dim // 4] *= low_freq_factor
 
 
