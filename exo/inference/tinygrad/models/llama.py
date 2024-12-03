@@ -42,7 +42,30 @@ def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0, dtype=dtype
             freqs[dim // 4:] = freqs[dim // 4:].contiguous() * high_freq_factor
             freqs *= (original_max_pos_emb / end) ** (1.0 / factor)
 
-        freqs = Tensor.arange(end).unsqueeze(dim=1) * freqs.unsqueeze(dim=0)
+        # 拆分每一步并打印值
+        try:
+            # 创建范围张量
+            arange_tensor = Tensor.arange(end)
+            print(f"【DEBUG】arange_tensor: {arange_tensor}, shape: {arange_tensor.shape}")
+
+            # 扩展维度
+            unsqueezed_arange = arange_tensor.unsqueeze(dim=1)
+            print(f"【DEBUG】unsqueezed_arange: {unsqueezed_arange}, shape: {unsqueezed_arange.shape}")
+
+            # 扩展 freq 维度
+            unsqueezed_freqs = freqs.unsqueeze(dim=0)
+            print(f"【DEBUG】unsqueezed_freqs: {unsqueezed_freqs}, shape: {unsqueezed_freqs.shape}")
+
+            # 执行乘法
+            freqs = unsqueezed_arange * unsqueezed_freqs
+            print(f"【DEBUG】freqs after multiplication: {freqs}, shape: {freqs.shape}")
+
+        except Exception as e:
+            print(f"【ERROR】Exception in computing freqs: {e}")
+            print(
+                f"【DEBUG】end: {end}, arange_tensor shape: {arange_tensor.shape if 'arange_tensor' in locals() else 'not defined'}, freqs shape: {freqs.shape if 'freqs' in locals() else 'not defined'}")
+            raise  # 重新抛出异常以便进一步处理
+
         print("【DEBUG 3】Exiting precompute_freqs_cis")
         return Tensor.stack(freqs.cos().cast(dtype), freqs.sin().cast(dtype), dim=-1).reshape(1, end, 1, dim // 2, 2)
 
