@@ -50,7 +50,7 @@ def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0, dtype=dtype
             print(f"【DEBUG】dim // 4: {dim // 4}")
             print(f"【DEBUG】freqs[:dim // 4]: {freqs[:dim // 4]}, shape: {freqs[:dim // 4].shape}")
 
-            freqs[:dim // 4] *= low_freq_factor
+            freqs[:dim // 4] =  freqs[:dim // 4]
 
             print("【DEBUG 7】Applying rope scaling")
             freqs[dim // 4:] = freqs[dim // 4:].contiguous() * high_freq_factor
