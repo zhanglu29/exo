@@ -244,7 +244,7 @@ class StandardNode(Node):
     if DEBUG >= 1: print(f"[{request_id}] process_tensor: {tensor.size=} {tensor.shape=}")
     try:
       result = await self.inference_engine.infer_tensor(request_id, shard, tensor)
-      ret = await self.process_inference_result(shard, result, request_id) 
+      ret = await self.process_inference_result(shard, result, request_id)
       return ret
     except Exception as e:
       print(f"Error processing tensor for shard {shard}: {e}")
@@ -269,6 +269,14 @@ class StandardNode(Node):
       if not target_peer:
         raise ValueError(f"Peer for {target_index} not found")
       if DEBUG >= 1: print(f"Sending prompt to {target_peer.id()}: {prompt}")
+
+      # 打印所有参数
+      print(f"Sending parameters:")
+      print(f"  next_shard: {next_shard}")
+      print(f"  prompt: {prompt}")
+      print(f"  request_id: {request_id}")
+      print(f"  target_peer: {target_peer}")
+
       await target_peer.send_prompt(next_shard, prompt, request_id=request_id)
   
   async def forward_tensor(
