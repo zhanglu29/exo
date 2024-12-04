@@ -1,0 +1,32 @@
+{
+  "peers": {
+    "node1": {
+      "address": "192.168.88.112",
+      "port": 8001,
+      "device_capabilities": {
+        "model": "Unknown Model",
+        "chip": "Unknown Chip",
+        "memory": 0,
+        "flops": {
+          "fp32": 0,
+          "fp16": 0,
+          "int8": 0
+        }
+      }
+    },
+    "node2": {
+      "address": "192.168.88.139",
+      "port": 8001,
+      "device_capabilities": {
+        "model": "Unknown Model",
+        "chip": "Unknown Chip",
+        "memory": 0,
+        "flops": {
+          "fp32": 0,
+          "fp16": 0,
+          "int8": 0
+        }
+      }
+    }
+  }
+}
