@@ -90,42 +90,49 @@ class GRPCPeerHandle(PeerHandle):
   #
   #   return np.frombuffer(response.tensor_data, dtype=np.dtype(response.dtype)).reshape(response.shape)
 
-  async  def send_prompt(self, shard: Shard, prompt: str, request_id: Optional[str] = None) -> Optional[np.array]:
-    print(f"准备发送请求...")
+  async def send_prompt(self, shard: Shard, prompt: str, request_id: Optional[str] = None) -> Optional[np.array]:
+    print(f"准备发送请求到 {self.stub}: {self.address}")
 
     # 创建请求对象
     request = node_service_pb2.PromptRequest(
-      prompt=prompt,
-      shard=node_service_pb2.Shard(
-        model_id=shard.model_id,
-        start_layer=shard.start_layer,
-        end_layer=shard.end_layer,
-        n_layers=shard.n_layers,
-      ),
-      request_id=request_id,
+        prompt=prompt,
+        shard=node_service_pb2.Shard(
+            model_id=shard.model_id,
+            start_layer=shard.start_layer,
+            end_layer=shard.end_layer,
+            n_layers=shard.n_layers,
+        ),
+        request_id=request_id,
     )
 
     print(f"请求对象: {request}")
 
     try:
-      # 发送请求
-      response = await self.stub.SendPrompt(request)
-      print(f"收到响应: {response}")
+        # 发送请求
+        response = await self.stub.SendPrompt(request)
+        print(f"收到响应: {response}")
 
-      # 检查响应
-      if not response.tensor_data or not response.shape or not response.dtype:
-        print(f"响应数据不完整: tensor_data={response.tensor_data}, shape={response.shape}, dtype={response.dtype}")
-        return None
+        # 检查响应
+        if not response.tensor_data or not response.shape or not response.dtype:
+            print(f"响应数据不完整: tensor_data={response.tensor_data}, shape={response.shape}, dtype={response.dtype}")
+            return None
 
-      # 处理响应数据
-      result = np.frombuffer(response.tensor_data, dtype=np.dtype(response.dtype)).reshape(response.shape)
-      print(f"处理后的结果: {result}")
+        # 处理响应数据
+        result = np.frombuffer(response.tensor_data, dtype=np.dtype(response.dtype)).reshape(response.shape)
+        print(f"处理后的结果: {result}")
 
-      return result
+        return result
+
+    except grpc.aio.AioRpcError as rpc_error:
+        print(f"RPC错误: {rpc_error}")
+        print(f"状态码: {rpc_error.code()}")
+        print(f"错误细节: {rpc_error.details()}")
+        print(f"调试信息: {rpc_error.debug_error_string()}")
 
     except Exception as e:
-      print(f"发送请求时发生错误: {e}")
-      return None
+        print(f"发送请求时发生其他错误: {e}")
+
+    return None
 
   async def send_tensor(self, shard: Shard, tensor: np.ndarray, request_id: Optional[str] = None) -> Optional[np.array]:
     request = node_service_pb2.TensorRequest(
