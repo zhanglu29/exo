@@ -10,6 +10,7 @@ from exo.inference.shard import Shard
 from exo.topology.topology import Topology
 from exo.topology.device_capabilities import DeviceCapabilities, DeviceFlops
 from exo.helpers import DEBUG
+import time
 
 # 存储上次调用时间的字典
 _last_call_time = {}

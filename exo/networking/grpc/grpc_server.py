@@ -159,6 +159,6 @@ class GRPCServer(node_service_pb2_grpc.NodeServiceServicer):
         self.node.on_opaque_status.trigger_all(request_id, status)
         return node_service_pb2.Empty()
 
-    @log_execution_info
+    # @log_execution_info
     async def HealthCheck(self, request, context):
         return node_service_pb2.HealthCheckResponse(is_healthy=True)
