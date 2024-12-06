@@ -23,7 +23,7 @@ async def resolve_tokenizer(model_id: str):
   if model_id == "dummy":
     return DummyTokenizer()
   local_path = await get_local_snapshot_dir(model_id)
-  local_path = "/root/models/"+str(model_id)
+  # local_path = "/root/models/"+str(model_id)
   print(f"local_path:-------------------------{local_path}")
   stack = inspect.stack()
   # stack[1] 是调用者的信息
