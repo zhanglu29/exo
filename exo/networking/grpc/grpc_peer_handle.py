@@ -40,7 +40,7 @@ def log_execution_info(func):
         duration = end_time - start_time
 
         # 打印日志
-        print(f"[INFO] 【STUB】Function '{func.__name__}' called from {caller_function} "
+        print(f"[INFO] STUB Function '{func.__name__}' called from {caller_function} "
               f"({caller_file}:{caller_line}) executed in {duration:.6f} seconds. "
               f"Parameter size: {total_size} bytes. Args: {args}, Kwargs: {kwargs}")
 
