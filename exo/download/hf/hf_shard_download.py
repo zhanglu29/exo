@@ -22,6 +22,7 @@ class HFShardDownloader(ShardDownloader):
     repo_name = get_repo(shard.model_id, inference_engine_name)
     if shard in self.completed_downloads:
       return self.completed_downloads[shard]
+    print(f"quick_check---------------------------{self.quick_check}-------{shard}")
     if self.quick_check:
       repo_root = get_repo_root(repo_name)
       snapshots_dir = repo_root/"snapshots"

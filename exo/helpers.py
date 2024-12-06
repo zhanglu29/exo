@@ -278,37 +278,52 @@ class Colors:
 # 保存上次调用时间
 _last_call_time = {}
 
+
 def log_caller_info(func):
-    def wrapper(*args, **kwargs):
-        # 获取调用栈信息
-        stack = inspect.stack()
-        caller = stack[1]  # 调用此函数的直接调用者
-        filename = caller.filename
-        line_number = caller.lineno
-        function_name = caller.function
+  def wrapper(*args, **kwargs):
+    # 获取调用栈信息
+    stack = inspect.stack()
+    caller = stack[1]  # 调用此函数的直接调用者
+    filename = caller.filename
+    line_number = caller.lineno
+    function_name = caller.function
 
-        # 获取当前时间
-        current_time = time.time()
+    # 获取调用前时间
+    start_time = time.time()
 
-        # 获取前一次调用时间差
-        func_key = f"{caller.filename}:{caller.lineno}:{caller.function}"
-        last_call_time = _last_call_time.get(func_key, None)
-        time_diff = (
-            f"{Colors.FAIL}{current_time - last_call_time:.6f} seconds{Colors.ENDC}"
-            if last_call_time is not None
-            else f"{Colors.WARNING}N/A{Colors.ENDC}"
-        )
-        _last_call_time[func_key] = current_time  # 更新调用时间
+    # 获取前一次调用时间差
+    func_key = f"{caller.filename}:{caller.lineno}:{caller.function}"
+    last_call_time = _last_call_time.get(func_key, None)
+    time_diff = (
+      f"Time difference from last call: {start_time - last_call_time:.6f} seconds"
+      if last_call_time is not None
+      else "Time difference from last call: N/A"
+    )
+    _last_call_time[func_key] = start_time  # 更新调用时间
 
-        # 打印带颜色的调用信息和时间差
-        print(
-            f"{Colors.OKGREEN}Function '{Colors.OKBLUE}{func.__name__}{Colors.OKGREEN}' "
-            f"was called by '{Colors.WARNING}{function_name}{Colors.OKGREEN}' "
-            f"in {Colors.UNDERLINE}{filename}{Colors.ENDC}:{Colors.FAIL}{line_number}{Colors.ENDC}. "
-            f"Time since last call: {time_diff}"
-        )
+    # 打印调用前信息（日志）
+    log_message_before = (
+      f"[INFO] Function '{func.__name__}' was called by '{function_name}' in {filename}:{line_number}. "
+      f"Call before time: {start_time}. {time_diff}"
+    )
+    print(log_message_before)
 
-        # 执行原始函数
-        return func(*args, **kwargs)
+    # 执行原始函数
+    result = func(*args, **kwargs)
 
-    return wrapper
+    # 获取调用后时间
+    end_time = time.time()
+
+    # 计算时间差
+    duration = end_time - start_time
+
+    # 打印调用后信息（日志）
+    log_message_after = (
+      f"[INFO] Function '{func.__name__}' finished execution. "
+      f"Call after time: {end_time}. Execution time: {duration:.6f} seconds."
+    )
+    print(log_message_after)
+
+    return result
+
+  return wrapper

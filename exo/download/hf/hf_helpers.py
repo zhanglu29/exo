@@ -127,7 +127,8 @@ async def fetch_file_list(session, repo_id, revision, path=""):
   url = f"{api_url}/{path}" if path else api_url
 
   headers = await get_auth_headers()
-  async with session.get(url, headers=headers) as response:
+  hf_proxy = get_proxy_host()
+  async with session.get(url, headers=headers,proxy=hf_proxy) as response:
     if response.status == 200:
       data = await response.json()
       files = []
@@ -160,8 +161,8 @@ async def download_file(
   headers = await get_auth_headers()
   if use_range_request:
     headers["Range"] = f"bytes={local_file_size}-"
-
-  async with session.get(url, headers=headers) as response:
+  hf_proxy = get_proxy_host()
+  async with session.get(url, headers=headers,proxy=hf_proxy) as response:
     total_size = int(response.headers.get('Content-Length', 0))
     downloaded_size = local_file_size
     downloaded_this_session = 0
@@ -240,7 +241,8 @@ async def resolve_revision_to_commit_hash(repo_id: str, revision: str) -> str:
   async with aiohttp.ClientSession() as session:
     api_url = f"{get_hf_endpoint()}/api/models/{repo_id}/revision/{revision}"
     headers = await get_auth_headers()
-    async with session.get(api_url, headers=headers) as response:
+    hf_proxy = get_proxy_host()
+    async with session.get(api_url, headers=headers,proxy=hf_proxy) as response:
       if response.status != 200:
         raise Exception(f"Failed to fetch revision info from {api_url}: {response.status}")
       revision_info = await response.json()
@@ -441,3 +443,6 @@ async def has_hf_home_write_access() -> bool:
   hf_home = get_hf_home()
   try: return await aios.access(hf_home, os.W_OK)
   except OSError: return False
+
+def get_proxy_host() -> str:
+  return os.environ.get('HF_PROXY', "http://192.168.88.110:7890")

@@ -23,17 +23,8 @@ async def resolve_tokenizer(model_id: str):
   if model_id == "dummy":
     return DummyTokenizer()
   local_path = await get_local_snapshot_dir(model_id)
-  local_path = "/root/models/"+str(model_id)
+  # local_path = "/root/models/"+str(model_id)
   print(f"local_path:-------------------------{local_path}")
-  stack = inspect.stack()
-  # stack[1] 是调用者的信息
-  caller = stack[1]
-  # 获取调用者的文件名、行号、函数名
-  filename = caller.filename
-  line_number = caller.lineno
-  function_name = caller.function
-  print(f"Function '{function_name}' called this function from {filename}:{line_number}")
-
   if DEBUG >= 2: print(f"Checking if local path exists to load tokenizer from local {local_path=}")
   try:
     if local_path and await aios.path.exists(local_path):

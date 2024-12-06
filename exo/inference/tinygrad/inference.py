@@ -91,7 +91,7 @@ class TinygradDynamicShardInferenceEngine(InferenceEngine):
   async def ensure_shard(self, shard: Shard):
     if self.shard == shard:
       return
-
+    print(f"shard-------------232333333333---------{shard}")
     model_path = await self.shard_downloader.ensure_shard(shard, self.__class__.__name__)
     if self.shard != shard:
       loop = asyncio.get_running_loop()
