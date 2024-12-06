@@ -81,7 +81,7 @@ class StandardNode(Node):
             self.current_topology.active_node_id = None
       download_progress = None
       if status_data.get("type", "") == "download_progress":
-        if DEBUG >= 8: print(f"Download progress from {status_data.get('node_id')}: {status_data.get('progress')}")
+        #if DEBUG >= 8: print(f"Download progress from {status_data.get('node_id')}: {status_data.get('progress')}")
         download_progress = RepoProgressEvent.from_dict(status_data.get('progress'))
         self.node_download_progress[status_data.get('node_id')] = download_progress
       if self.topology_viz:

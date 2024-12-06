@@ -31,18 +31,18 @@ class GRPCPeerHandle(PeerHandle):
     return self._device_capabilities
 
   async def connect(self):
-    print(f"GRPC开始连接--------------&&&&&&&&&&&&————————————————————————{self.address}", self.channel)
+    # print(f"GRPC开始连接--------------&&&&&&&&&&&&————————————————————————{self.address}", self.channel)
     if self.channel is None:
       self.channel = grpc.aio.insecure_channel(self.address, options = [
         ("grpc.max_metadata_size", 32 * 1024 * 1024),
         ('grpc.max_receive_message_length', 32 * 1024 * 1024),
         ('grpc.max_send_message_length', 32 * 1024 * 1024)
       ])
-      print(f"GRPC开始连接--------------1111111————————————————————————{self.channel}",self.channel.get_state())
+      # print(f"GRPC开始连接--------------1111111————————————————————————{self.channel}",self.channel.get_state())
       self.stub = node_service_pb2_grpc.NodeServiceStub(self.channel)
-      print(f"GRPC开始连接--------------333333————————————————————————{self.stub}")
+      # print(f"GRPC开始连接--------------333333————————————————————————{self.stub}")
     self.channel.channel_ready()
-    print(f"GRPC开始连接--------------4444————————————————————————{self.channel}", self.channel.get_state())
+    # print(f"GRPC开始连接--------------4444————————————————————————{self.channel}", self.channel.get_state())
 
   async def is_connected(self) -> bool:
     return self.channel is not None and self.channel.get_state() == grpc.ChannelConnectivity.READY
@@ -91,7 +91,7 @@ class GRPCPeerHandle(PeerHandle):
   #   return np.frombuffer(response.tensor_data, dtype=np.dtype(response.dtype)).reshape(response.shape)
 
   async def send_prompt(self, shard: Shard, prompt: str, request_id: Optional[str] = None) -> Optional[np.array]:
-    print(f"准备发送请求到 {self.stub}: {self.address}")
+    # print(f"准备发送请求到 {self.stub}: {self.address}")
 
     # 创建请求对象
     request = node_service_pb2.PromptRequest(
@@ -105,12 +105,12 @@ class GRPCPeerHandle(PeerHandle):
         request_id=request_id,
     )
 
-    print(f"请求对象: {request}")
+    # print(f"请求对象: {request}")
 
     try:
         # 发送请求
         response = await self.stub.SendPrompt(request)
-        print(f"收到响应: {response}")
+        # print(f"收到响应: {response}")
 
         # 检查响应
         if not response.tensor_data or not response.shape or not response.dtype:
@@ -119,7 +119,7 @@ class GRPCPeerHandle(PeerHandle):
 
         # 处理响应数据
         result = np.frombuffer(response.tensor_data, dtype=np.dtype(response.dtype)).reshape(response.shape)
-        print(f"处理后的结果: {result}")
+        # print(f"处理后的结果: {result}")
 
         return result
 
