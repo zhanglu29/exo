@@ -162,7 +162,7 @@ class GRPCPeerHandle(PeerHandle):
             response.is_finished,
         )
 
-    @log_execution_info
+    # @log_execution_info
     async def collect_topology(self, visited: set[str], max_depth: int) -> Topology:
         request = node_service_pb2.CollectTopologyRequest(visited=visited, max_depth=max_depth)
         response = await self.stub.CollectTopology(request)
@@ -183,7 +183,7 @@ class GRPCPeerHandle(PeerHandle):
         request = node_service_pb2.SendResultRequest(request_id=request_id, result=result, is_finished=is_finished)
         await self.stub.SendResult(request)
 
-    @log_execution_info
+    # @log_execution_info
     async def send_opaque_status(self, request_id: str, status: str) -> None:
         request = node_service_pb2.SendOpaqueStatusRequest(request_id=request_id, status=status)
         await self.stub.SendOpaqueStatus(request)
