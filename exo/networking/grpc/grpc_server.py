@@ -120,7 +120,7 @@ class GRPCServer(node_service_pb2_grpc.NodeServiceServicer):
             ) if result[0] is not None else node_service_pb2.InferenceResult(is_finished=result[1])
         )
 
-    @log_execution_info
+    # @log_execution_info
     async def CollectTopology(self, request, context):
         max_depth = request.max_depth
         visited = set(request.visited)
@@ -150,7 +150,7 @@ class GRPCServer(node_service_pb2_grpc.NodeServiceServicer):
         self.node.on_token.trigger_all(request_id, result, is_finished)
         return node_service_pb2.Empty()
 
-    @log_execution_info
+    # @log_execution_info
     async def SendOpaqueStatus(self, request, context):
         request_id = request.request_id
         status = request.status
@@ -159,6 +159,6 @@ class GRPCServer(node_service_pb2_grpc.NodeServiceServicer):
         self.node.on_opaque_status.trigger_all(request_id, status)
         return node_service_pb2.Empty()
 
-    @log_execution_info
+    # @log_execution_info
     async def HealthCheck(self, request, context):
         return node_service_pb2.HealthCheckResponse(is_healthy=True)
