@@ -36,7 +36,7 @@ def log_execution_info(func):
         duration = end_time - start_time
 
         # 打印日志
-        print(f"[INFO] Function '{func.__name__}' executed in {duration:.6f} seconds. "
+        print(f"[INFO-STUB] Function '{func.__name__}' executed in {duration:.6f} seconds. "
               f"Parameter size: {total_size} bytes.")
 
         return result
