@@ -47,7 +47,7 @@ class GRPCServer(node_service_pb2_grpc.NodeServiceServicer):
         self.server = None
 
     async def start(self) -> None:
-        print("ubuntu---GRPC server 任务启动------------------------------------")
+        # print("ubuntu---GRPC server 任务启动------------------------------------")
         self.server = grpc.aio.server(
             futures.ThreadPoolExecutor(max_workers=10),
             options=[
