@@ -11,7 +11,7 @@ from exo.inference.shard import Shard
 from exo.topology.topology import Topology
 from exo.topology.device_capabilities import DeviceCapabilities, DeviceFlops
 from exo.helpers import DEBUG
-
+from exo.helpers import log_cost_info
 
 class GRPCPeerHandle(PeerHandle):
   def __init__(self, _id: str, address: str, device_capabilities: DeviceCapabilities):
@@ -90,6 +90,7 @@ class GRPCPeerHandle(PeerHandle):
   #
   #   return np.frombuffer(response.tensor_data, dtype=np.dtype(response.dtype)).reshape(response.shape)
 
+  @log_cost_info
   async def send_prompt(self, shard: Shard, prompt: str, request_id: Optional[str] = None) -> Optional[np.array]:
     # print(f"准备发送请求到 {self.stub}: {self.address}")
 
@@ -134,6 +135,7 @@ class GRPCPeerHandle(PeerHandle):
 
     return None
 
+  @log_cost_info
   async def send_tensor(self, shard: Shard, tensor: np.ndarray, request_id: Optional[str] = None) -> Optional[np.array]:
     request = node_service_pb2.TensorRequest(
       shard=node_service_pb2.Shard(
@@ -152,6 +154,7 @@ class GRPCPeerHandle(PeerHandle):
 
     return np.frombuffer(response.tensor_data, dtype=np.dtype(response.dtype)).reshape(response.shape)
 
+  @log_cost_info
   async def get_inference_result(self, request_id: str) -> Tuple[Optional[np.ndarray], bool]:
     request = node_service_pb2.GetInferenceResultRequest(request_id=request_id)
     response = await self.stub.GetInferenceResult(request)
@@ -176,10 +179,12 @@ class GRPCPeerHandle(PeerHandle):
         topology.add_edge(node_id, peer_id)
     return topology
 
+  @log_cost_info
   async def send_result(self, request_id: str, result: List[int], is_finished: bool) -> None:
     request = node_service_pb2.SendResultRequest(request_id=request_id, result=result, is_finished=is_finished)
     await self.stub.SendResult(request)
 
+  @log_cost_info
   async def send_opaque_status(self, request_id: str, status: str) -> None:
     request = node_service_pb2.SendOpaqueStatusRequest(request_id=request_id, status=status)
     await self.stub.SendOpaqueStatus(request)

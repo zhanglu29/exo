@@ -8,7 +8,7 @@ from . import node_service_pb2_grpc
 from exo import DEBUG
 from exo.inference.shard import Shard
 from exo.orchestration import Node
-
+from exo.helpers import log_cost_info
 
 class GRPCServer(node_service_pb2_grpc.NodeServiceServicer):
   def __init__(self, node: Node, host: str, port: int):
@@ -42,6 +42,7 @@ class GRPCServer(node_service_pb2_grpc.NodeServiceServicer):
         pass
       if DEBUG >= 1: print("Server stopped and all connections are closed")
 
+  @log_cost_info
   async def SendPrompt(self, request, context):
     shard = Shard(
       model_id=request.shard.model_id,
@@ -56,6 +57,7 @@ class GRPCServer(node_service_pb2_grpc.NodeServiceServicer):
     tensor_data = result.tobytes() if result is not None else None
     return node_service_pb2.Tensor(tensor_data=tensor_data, shape=result.shape, dtype=str(result.dtype)) if result is not None else node_service_pb2.Tensor()
 
+  @log_cost_info
   async def SendTensor(self, request, context):
     shard = Shard(
       model_id=request.shard.model_id,
@@ -71,6 +73,7 @@ class GRPCServer(node_service_pb2_grpc.NodeServiceServicer):
     tensor_data = result.tobytes() if result is not None else None
     return node_service_pb2.Tensor(tensor_data=tensor_data, shape=result.shape, dtype=str(result.dtype)) if result is not None else node_service_pb2.Tensor()
 
+  @log_cost_info
   async def GetInferenceResult(self, request, context):
     request_id = request.request_id
     result = await self.node.get_inference_result(request_id)
@@ -101,6 +104,7 @@ class GRPCServer(node_service_pb2_grpc.NodeServiceServicer):
     if DEBUG >= 5: print(f"CollectTopology {max_depth=} {visited=} {nodes=} {peer_graph=}")
     return node_service_pb2.Topology(nodes=nodes, peer_graph=peer_graph)
 
+  @log_cost_info
   async def SendResult(self, request, context):
     request_id = request.request_id
     result = request.result
@@ -109,6 +113,7 @@ class GRPCServer(node_service_pb2_grpc.NodeServiceServicer):
     self.node.on_token.trigger_all(request_id, result, is_finished)
     return node_service_pb2.Empty()
 
+  @log_cost_info
   async def SendOpaqueStatus(self, request, context):
     request_id = request.request_id
     status = request.status
