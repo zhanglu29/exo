@@ -17,6 +17,7 @@ from exo.viz.topology_viz import TopologyViz
 from exo.download.hf.hf_helpers import RepoProgressEvent
 from exo.inference.inference_engine import get_inference_engine, InferenceEngine
 from exo.download.hf.hf_shard_download import HFShardDownloader
+from exo.helpers import log_caller_info
 
 class StandardNode(Node):
   def __init__(
@@ -50,6 +51,7 @@ class StandardNode(Node):
     self.topology_inference_engines_pool: List[List[str]] = []
     self.shard_downloader = shard_downloader
 
+  @log_caller_info
   async def start(self, wait_for_peers: int = 0) -> None:
     await self.server.start()
     await self.discovery.start()
@@ -58,10 +60,12 @@ class StandardNode(Node):
     if DEBUG >= 2: print(f"Collected topology: {self.topology}")
     asyncio.create_task(self.periodic_topology_collection(1.0))
 
+  @log_caller_info
   async def stop(self) -> None:
     await self.discovery.stop()
     await self.server.stop()
 
+  @log_caller_info
   def on_node_status(self, request_id, opaque_status):
     try:
       status_data = json.loads(opaque_status)
@@ -86,6 +90,7 @@ class StandardNode(Node):
       if DEBUG >= 1: print(f"Error updating visualization: {e}")
       if DEBUG >= 1: traceback.print_exc()
 
+  @log_caller_info
   def get_supported_inference_engines(self):
     supported_engine_names = []
     if self.inference_engine.__class__.__name__ == 'MLXDynamicShardInferenceEngine':
@@ -101,7 +106,8 @@ class StandardNode(Node):
 
   def get_topology_inference_engines(self) -> List[List[str]]:
     return self.topology_inference_engines_pool
-  
+
+  @log_caller_info
   async def process_inference_result(
     self,
     shard,
@@ -130,6 +136,7 @@ class StandardNode(Node):
 
     return np.array(self.buffered_token_output[request_id][0])
 
+  @log_caller_info
   async def process_prompt(
     self,
     base_shard: Shard,
@@ -173,6 +180,7 @@ class StandardNode(Node):
     )
     return resp
 
+  @log_caller_info
   async def _process_prompt(self, base_shard: Shard, prompt: str, request_id: Optional[str] = None) -> Optional[np.ndarray]:
     if request_id is None:
       request_id = str(uuid.uuid4())
@@ -188,6 +196,7 @@ class StandardNode(Node):
       ret = await self.process_inference_result(shard, result, request_id) 
       return result
 
+  @log_caller_info
   async def process_tensor(
     self,
     base_shard: Shard,
@@ -231,6 +240,7 @@ class StandardNode(Node):
     )
     return resp
 
+  @log_caller_info
   async def _process_tensor(
     self,
     base_shard: Shard,
@@ -251,6 +261,7 @@ class StandardNode(Node):
       traceback.print_exc()
       return None
 
+  @log_caller_info
   async def forward_prompt(
     self,
     base_shard: Shard,
@@ -278,7 +289,8 @@ class StandardNode(Node):
       print(f"  target_peer: {target_peer}")
 
       await target_peer.send_prompt(next_shard, prompt, request_id=request_id)
-  
+
+  @log_caller_info
   async def forward_tensor(
     self,
     base_shard: Shard,
@@ -299,6 +311,7 @@ class StandardNode(Node):
       if DEBUG >= 1: print(f"Sending tensor to {target_peer.id()}: {tensor}")
       await target_peer.send_tensor(next_shard, tensor, request_id=request_id)
 
+  @log_caller_info
   def get_partition_index(self, offset: int = 0):
     if not self.partitioning_strategy:
       if DEBUG >= 1: print("No partitioning strategy found. Skipping forward.")
@@ -309,6 +322,7 @@ class StandardNode(Node):
       raise ValueError(f"No current partition found for node: {self.id}")
     return (current_partition_index + offset) % len(partitions)
 
+  @log_caller_info
   def get_current_shard(self, base_shard: Shard, index: Optional[int] = None) -> Shard:
     if index is None:
       index = self.get_partition_index()
@@ -316,6 +330,7 @@ class StandardNode(Node):
     shards = map_partitions_to_shards(partitions, base_shard.n_layers, base_shard.model_id)
     return shards[index]
 
+  @log_caller_info
   async def update_peers(self, wait_for_peers: int = 0) -> bool:
     next_peers = await self.discovery.discover_peers(wait_for_peers)
     current_peer_ids = {peer.id() for peer in self.peers}
@@ -386,11 +401,13 @@ class StandardNode(Node):
         print(f"Error collecting topology: {e}")
         traceback.print_exc()
 
+  @log_caller_info
   async def get_inference_result(self, request_id: str) -> Tuple[Optional[np.ndarray], bool]:
     if request_id not in self.buffered_token_output:
       return None, False
     return np.array(self.buffered_token_output[request_id][0]), self.buffered_token_output[request_id][1]
 
+  @log_caller_info
   async def collect_topology(self, visited: set[str] = set(), max_depth: int = 4) -> Topology:
     next_topology = Topology()
     next_topology.update_node(self.id, self.device_capabilities)

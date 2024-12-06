@@ -10,6 +10,8 @@ import uuid
 import netifaces
 from pathlib import Path
 import tempfile
+import inspect
+import time
 
 DEBUG = int(os.getenv("DEBUG", default="0"))
 DEBUG_DISCOVERY = int(os.getenv("DEBUG_DISCOVERY", default="0"))
@@ -259,3 +261,54 @@ def is_frozen():
   return getattr(sys, 'frozen', False) or os.path.basename(sys.executable) == "exo" \
     or ('Contents/MacOS' in str(os.path.dirname(sys.executable))) \
     or '__nuitka__' in globals() or getattr(sys, '__compiled__', False)
+
+# 定义颜色代码
+class Colors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
+# 保存上次调用时间
+_last_call_time = {}
+
+def log_caller_info(func):
+    def wrapper(*args, **kwargs):
+        # 获取调用栈信息
+        stack = inspect.stack()
+        caller = stack[1]  # 调用此函数的直接调用者
+        filename = caller.filename
+        line_number = caller.lineno
+        function_name = caller.function
+
+        # 获取当前时间
+        current_time = time.time()
+
+        # 获取前一次调用时间差
+        func_key = f"{caller.filename}:{caller.lineno}:{caller.function}"
+        last_call_time = _last_call_time.get(func_key, None)
+        time_diff = (
+            f"{Colors.FAIL}{current_time - last_call_time:.6f} seconds{Colors.ENDC}"
+            if last_call_time is not None
+            else f"{Colors.WARNING}N/A{Colors.ENDC}"
+        )
+        _last_call_time[func_key] = current_time  # 更新调用时间
+
+        # 打印带颜色的调用信息和时间差
+        print(
+            f"{Colors.OKGREEN}Function '{Colors.OKBLUE}{func.__name__}{Colors.OKGREEN}' "
+            f"was called by '{Colors.WARNING}{function_name}{Colors.OKGREEN}' "
+            f"in {Colors.UNDERLINE}{filename}{Colors.ENDC}:{Colors.FAIL}{line_number}{Colors.ENDC}. "
+            f"Time since last call: {time_diff}"
+        )
+
+        # 执行原始函数
+        return func(*args, **kwargs)
+
+    return wrapper
