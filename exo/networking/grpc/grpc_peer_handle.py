@@ -2,6 +2,7 @@ import grpc
 import numpy as np
 import asyncio
 import sys
+import inspect
 from typing import Optional, Tuple, List
 from . import node_service_pb2
 from . import node_service_pb2_grpc
@@ -12,19 +13,22 @@ from exo.topology.device_capabilities import DeviceCapabilities, DeviceFlops
 from exo.helpers import DEBUG
 import time
 
-# 存储上次调用时间的字典
-_last_call_time = {}
-
 def log_execution_info(func):
-    """装饰器，用于记录函数执行时间和参数字节大小"""
+    """装饰器，用于记录函数执行时间、参数字节大小和调用关系"""
     async def wrapper(*args, **kwargs):
         # 计算参数字节大小
-        args_size = sys.getsizeof(args)
-        kwargs_size = sys.getsizeof(kwargs)
+        args_size = sum(sys.getsizeof(arg) for arg in args)
+        kwargs_size = sum(sys.getsizeof(key) + sys.getsizeof(value) for key, value in kwargs.items())
         total_size = args_size + kwargs_size
 
         # 获取调用前时间
         start_time = time.time()
+
+        # 获取调用者信息
+        frame = inspect.currentframe().f_back
+        caller_function = frame.f_code.co_name
+        caller_line = frame.f_lineno
+        caller_file = frame.f_code.co_filename
 
         # 执行原始函数
         result = await func(*args, **kwargs)
@@ -36,8 +40,9 @@ def log_execution_info(func):
         duration = end_time - start_time
 
         # 打印日志
-        print(f"[INFO-STUB] Function '{func.__name__}' executed in {duration:.6f} seconds. "
-              f"Parameter size: {total_size} bytes.")
+        print(f"[INFO] 【STUB】Function '{func.__name__}' called from {caller_function} "
+              f"({caller_file}:{caller_line}) executed in {duration:.6f} seconds. "
+              f"Parameter size: {total_size} bytes. Args: {args}, Kwargs: {kwargs}")
 
         return result
 
@@ -99,7 +104,7 @@ class GRPCPeerHandle(PeerHandle):
             return False
 
     @log_execution_info
-    async def send_prompt(self, shard: Shard, prompt: str, request_id: Optional[str] = None) -> Optional[np.array]:
+    async def send_prompt(self, shard: Shard, prompt: str, request_id: Optional[str] = None) -> Optional[np.ndarray]:
         request = node_service_pb2.PromptRequest(
             prompt=prompt,
             shard=node_service_pb2.Shard(
@@ -133,7 +138,7 @@ class GRPCPeerHandle(PeerHandle):
         return None
 
     @log_execution_info
-    async def send_tensor(self, shard: Shard, tensor: np.ndarray, request_id: Optional[str] = None) -> Optional[np.array]:
+    async def send_tensor(self, shard: Shard, tensor: np.ndarray, request_id: Optional[str] = None) -> Optional[np.ndarray]:
         request = node_service_pb2.TensorRequest(
             shard=node_service_pb2.Shard(
                 model_id=shard.model_id,
@@ -162,7 +167,6 @@ class GRPCPeerHandle(PeerHandle):
             response.is_finished,
         )
 
-    # @log_execution_info
     async def collect_topology(self, visited: set[str], max_depth: int) -> Topology:
         request = node_service_pb2.CollectTopologyRequest(visited=visited, max_depth=max_depth)
         response = await self.stub.CollectTopology(request)
@@ -183,7 +187,6 @@ class GRPCPeerHandle(PeerHandle):
         request = node_service_pb2.SendResultRequest(request_id=request_id, result=result, is_finished=is_finished)
         await self.stub.SendResult(request)
 
-    # @log_execution_info
     async def send_opaque_status(self, request_id: str, status: str) -> None:
         request = node_service_pb2.SendOpaqueStatusRequest(request_id=request_id, status=status)
         await self.stub.SendOpaqueStatus(request)
