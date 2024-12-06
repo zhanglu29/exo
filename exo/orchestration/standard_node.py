@@ -394,7 +394,7 @@ class StandardNode(Node):
       await asyncio.sleep(interval)
       try:
         did_peers_change = await self.update_peers()
-        if DEBUG >= 2: print(f"{did_peers_change=}")
+        # if DEBUG >= 2: print(f"{did_peers_change=}")
         if did_peers_change:
           await self.collect_topology()
           await self.select_best_inference_engine()
