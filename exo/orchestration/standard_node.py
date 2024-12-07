@@ -17,7 +17,7 @@ from exo.viz.topology_viz import TopologyViz
 from exo.download.hf.hf_helpers import RepoProgressEvent
 from exo.inference.inference_engine import get_inference_engine, InferenceEngine
 from exo.download.hf.hf_shard_download import HFShardDownloader
-from exo.helpers import log_caller_info
+from exo.helpers import log_caller_info, log_cost_info
 
 class StandardNode(Node):
   def __init__(
@@ -136,7 +136,7 @@ class StandardNode(Node):
 
     return np.array(self.buffered_token_output[request_id][0])
 
-  @log_caller_info
+  @log_cost_info
   async def process_prompt(
     self,
     base_shard: Shard,
@@ -180,7 +180,7 @@ class StandardNode(Node):
     )
     return resp
 
-  @log_caller_info
+  @log_cost_info
   async def _process_prompt(self, base_shard: Shard, prompt: str, request_id: Optional[str] = None) -> Optional[np.ndarray]:
     if request_id is None:
       request_id = str(uuid.uuid4())
@@ -197,7 +197,7 @@ class StandardNode(Node):
       ret = await self.process_inference_result(shard, result, request_id) 
       return result
 
-  @log_caller_info
+  @log_cost_info
   async def process_tensor(
     self,
     base_shard: Shard,
@@ -241,7 +241,7 @@ class StandardNode(Node):
     )
     return resp
 
-  @log_caller_info
+  @log_cost_info
   async def _process_tensor(
     self,
     base_shard: Shard,
@@ -262,7 +262,7 @@ class StandardNode(Node):
       traceback.print_exc()
       return None
 
-  @log_caller_info
+  @log_cost_info
   async def forward_prompt(
     self,
     base_shard: Shard,
