@@ -283,12 +283,12 @@ _last_call_time = {}
 
 
 def log_caller_info(func):
-  if DEBUG != -3:
-    def wrapper(*args, **kwargs):
-      # 执行原始函数
-      return func(*args, **kwargs)
-
-    return wrapper
+  # if DEBUG != -3:
+  #   def wrapper(*args, **kwargs):
+  #     # 执行原始函数
+  #     return func(*args, **kwargs)
+  #
+  #   return wrapper
 
   def wrapper(*args, **kwargs):
     # 获取调用栈信息
