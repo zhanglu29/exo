@@ -282,7 +282,7 @@ class Colors:
 _last_call_time = {}
 
 
-def log_cost_info(func):
+def log_caller_info(func):
   # if DEBUG != -3:
   #   def wrapper(*args, **kwargs):
   #     # 执行原始函数
@@ -339,7 +339,7 @@ def log_cost_info(func):
   return wrapper
 
 
-def log_caller_info(func):
+def log_cost_info(func):
   # if DEBUG != -3:
   #   def wrapper(*args, **kwargs):
   #     # 执行原始函数
