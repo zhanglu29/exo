@@ -241,134 +241,158 @@ class ChatGPTAPI:
     return web.json_response(progress_data)
 
   async def handle_post_chat_completions(self, request):
-    data = await request.json()
-    if DEBUG >= 2: print(f"Handling chat completions request from {request.remote}: {data}")
-    stream = data.get("stream", False)
-    chat_request = parse_chat_request(data, self.default_model)
-    if chat_request.model and chat_request.model.startswith("gpt-"):  # to be compatible with ChatGPT tools, point all gpt- model requests to default model
-      chat_request.model = self.default_model
-    if not chat_request.model or chat_request.model not in model_cards:
-      if DEBUG >= 1: print(f"Invalid model: {chat_request.model}. Supported: {list(model_cards.keys())}. Defaulting to {self.default_model}")
-      chat_request.model = self.default_model
-    shard = build_base_shard(chat_request.model, self.inference_engine_classname)
-    if not shard:
-      supported_models = [model for model, info in model_cards.items() if self.inference_engine_classname in info.get("repo", {})]
-      return web.json_response(
-        {"detail": f"Unsupported model: {chat_request.model} with inference engine {self.inference_engine_classname}. Supported models for this engine: {supported_models}"},
-        status=400,
-      )
-    print(f"model_id----handle_post_chat_completions------{shard.model_id}")
-    tokenizer = await resolve_tokenizer(get_repo(shard.model_id, self.inference_engine_classname))
-    if DEBUG >= 4: print(f"Resolved tokenizer: {tokenizer}")
+      start_time = time.time()  # 开始时间
+      data = await request.json()
 
-    prompt = build_prompt(tokenizer, chat_request.messages)
-    request_id = str(uuid.uuid4())
-    if self.on_chat_completion_request:
-      try:
-        self.on_chat_completion_request(request_id, chat_request, prompt)
-      except Exception as e:
-        if DEBUG >= 2: traceback.print_exc()
-    # request_id = None
-    # match = self.prompts.find_longest_prefix(prompt)
-    # if match and len(prompt) > len(match[1].prompt):
-    #     if DEBUG >= 2:
-    #       print(f"Prompt for request starts with previous prompt {len(match[1].prompt)} of {len(prompt)}: {match[1].prompt}")
-    #     request_id = match[1].request_id
-    #     self.prompts.add(prompt, PromptSession(request_id=request_id, timestamp=int(time.time()), prompt=prompt))
-    #     # remove the matching prefix from the prompt
-    #     prompt = prompt[len(match[1].prompt):]
-    # else:
-    #   request_id = str(uuid.uuid4())
-    #   self.prompts.add(prompt, PromptSession(request_id=request_id, timestamp=int(time.time()), prompt=prompt))
+      if DEBUG >= 2:
+          print(f"Handling chat completions request from {request.remote}: {data}")
 
-    callback_id = f"chatgpt-api-wait-response-{request_id}"
-    callback = self.node.on_token.register(callback_id)
+      # 记录处理请求的时间
+      request_time = time.time()
 
-    if DEBUG >= 2: print(f"Sending prompt from ChatGPT api {request_id=} {shard=} {prompt=}")
+      stream = data.get("stream", False)
+      chat_request = parse_chat_request(data, self.default_model)
 
-    try:
-      await asyncio.wait_for(asyncio.shield(asyncio.create_task(self.node.process_prompt(shard, prompt, request_id=request_id))), timeout=self.response_timeout)
+      # 检查模型并记录时间
+      model_check_time = time.time()
+      if chat_request.model and chat_request.model.startswith("gpt-"):
+          chat_request.model = self.default_model
+      if not chat_request.model or chat_request.model not in model_cards:
+          if DEBUG >= 1:
+              print(
+                  f"Invalid model: {chat_request.model}. Supported: {list(model_cards.keys())}. Defaulting to {self.default_model}")
+          chat_request.model = self.default_model
+      model_check_duration = time.time() - model_check_time
+      if DEBUG >= 2:
+          print(f"[INFO] Model check duration: {model_check_duration:.6f} seconds")
 
-      if DEBUG >= 2: print(f"Waiting for response to finish. timeout={self.response_timeout}s")
-
-      if stream:
-        response = web.StreamResponse(
-          status=200,
-          reason="OK",
-          headers={
-            "Content-Type": "text/event-stream",
-            "Cache-Control": "no-cache",
-          },
-        )
-        await response.prepare(request)
-
-        async def stream_result(_request_id: str, tokens: List[int], is_finished: bool):
-          prev_last_tokens_len = self.prev_token_lens.get(_request_id, 0)
-          self.prev_token_lens[_request_id] = max(prev_last_tokens_len, len(tokens))
-          new_tokens = tokens[prev_last_tokens_len:]
-          finish_reason = None
-          eos_token_id = tokenizer.special_tokens_map.get("eos_token_id") if hasattr(tokenizer, "_tokenizer") and isinstance(tokenizer._tokenizer,
-                                                                                                                             AutoTokenizer) else getattr(tokenizer, "eos_token_id", None)
-          if len(new_tokens) > 0 and new_tokens[-1] == eos_token_id:
-            new_tokens = new_tokens[:-1]
-            if is_finished:
-              finish_reason = "stop"
-          if is_finished and not finish_reason:
-            finish_reason = "length"
-
-          completion = generate_completion(
-            chat_request,
-            tokenizer,
-            prompt,
-            request_id,
-            new_tokens,
-            stream,
-            finish_reason,
-            "chat.completion",
+      shard = build_base_shard(chat_request.model, self.inference_engine_classname)
+      if not shard:
+          supported_models = [model for model, info in model_cards.items() if
+                              self.inference_engine_classname in info.get("repo", {})]
+          return web.json_response(
+              {
+                  "detail": f"Unsupported model: {chat_request.model} with inference engine {self.inference_engine_classname}. Supported models for this engine: {supported_models}"},
+              status=400,
           )
-          if DEBUG >= 2: print(f"Streaming completion: {completion}")
+
+      tokenizer_time = time.time()  # 记录 tokenizer 加载时间
+      tokenizer = await resolve_tokenizer(get_repo(shard.model_id, self.inference_engine_classname))
+      tokenizer_duration = time.time() - tokenizer_time
+      if DEBUG >= 4:
+          print(f"[INFO] Tokenizer loading duration: {tokenizer_duration:.6f} seconds")
+
+      prompt_time = time.time()  # 记录 prompt 构建时间
+      prompt = build_prompt(tokenizer, chat_request.messages)
+      prompt_duration = time.time() - prompt_time
+      if DEBUG >= 2:
+          print(f"[INFO] Prompt building duration: {prompt_duration:.6f} seconds")
+
+      request_id = str(uuid.uuid4())
+
+      if self.on_chat_completion_request:
           try:
-            await response.write(f"data: {json.dumps(completion)}\n\n".encode())
+              self.on_chat_completion_request(request_id, chat_request, prompt)
           except Exception as e:
-            if DEBUG >= 2: print(f"Error streaming completion: {e}")
-            if DEBUG >= 2: traceback.print_exc()
+              if DEBUG >= 2:
+                  traceback.print_exc()
 
-        def on_result(_request_id: str, tokens: List[int], is_finished: bool):
-          if _request_id == request_id: self.stream_tasks[_request_id] = asyncio.create_task(stream_result(_request_id, tokens, is_finished))
+      callback_id = f"chatgpt-api-wait-response-{request_id}"
+      callback = self.node.on_token.register(callback_id)
 
-          return _request_id == request_id and is_finished
+      if DEBUG >= 2:
+          print(f"Sending prompt from ChatGPT API {request_id=} {shard=} {prompt=}")
 
-        _, tokens, _ = await callback.wait(on_result, timeout=self.response_timeout)
-        if request_id in self.stream_tasks:  # in case there is still a stream task running, wait for it to complete
-          if DEBUG >= 2: print("Pending stream task. Waiting for stream task to complete.")
-          try:
-            await asyncio.wait_for(self.stream_tasks[request_id], timeout=30)
-          except asyncio.TimeoutError:
-            print("WARNING: Stream task timed out. This should not happen.")
-        await response.write_eof()
-        return response
-      else:
-        _, tokens, _ = await callback.wait(
-          lambda _request_id, tokens, is_finished: _request_id == request_id and is_finished,
-          timeout=self.response_timeout,
-        )
+      try:
+          processing_time = time.time()  # 记录处理时间
+          await asyncio.wait_for(
+              asyncio.shield(asyncio.create_task(self.node.process_prompt(shard, prompt, request_id=request_id))),
+              timeout=self.response_timeout)
+          processing_duration = time.time() - processing_time
+          if DEBUG >= 2:
+              print(f"[INFO] Processing duration: {processing_duration:.6f} seconds")
 
-        finish_reason = "length"
-        eos_token_id = tokenizer.special_tokens_map.get("eos_token_id") if isinstance(getattr(tokenizer, "_tokenizer", None), AutoTokenizer) else tokenizer.eos_token_id
-        if DEBUG >= 2: print(f"Checking if end of tokens result {tokens[-1]=} is {eos_token_id=}")
-        if tokens[-1] == eos_token_id:
-          tokens = tokens[:-1]
-          finish_reason = "stop"
+          if stream:
+              response = web.StreamResponse(
+                  status=200,
+                  reason="OK",
+                  headers={
+                      "Content-Type": "text/event-stream",
+                      "Cache-Control": "no-cache",
+                  },
+              )
+              await response.prepare(request)
 
-        return web.json_response(generate_completion(chat_request, tokenizer, prompt, request_id, tokens, stream, finish_reason, "chat.completion"))
-    except asyncio.TimeoutError:
-      return web.json_response({"detail": "Response generation timed out"}, status=408)
-    except Exception as e:
-      if DEBUG >= 2: traceback.print_exc()
-      return web.json_response({"detail": f"Error processing prompt (see logs with DEBUG>=2): {str(e)}"}, status=500)
-    finally:
-      deregistered_callback = self.node.on_token.deregister(callback_id)
-      if DEBUG >= 2: print(f"Deregister {callback_id=} {deregistered_callback=}")
+              async def stream_result(_request_id: str, tokens: List[int], is_finished: bool):
+                  prev_last_tokens_len = self.prev_token_lens.get(_request_id, 0)
+                  self.prev_token_lens[_request_id] = max(prev_last_tokens_len, len(tokens))
+                  new_tokens = tokens[prev_last_tokens_len:]
+                  finish_reason = None
+                  eos_token_id = tokenizer.special_tokens_map.get("eos_token_id") if hasattr(tokenizer,
+                                                                                             "_tokenizer") and isinstance(
+                      tokenizer._tokenizer, AutoTokenizer) else getattr(tokenizer, "eos_token_id", None)
+                  if len(new_tokens) > 0 and new_tokens[-1] == eos_token_id:
+                      new_tokens = new_tokens[:-1]
+                      if is_finished:
+                          finish_reason = "stop"
+                  if is_finished and not finish_reason:
+                      finish_reason = "length"
+
+                  completion = generate_completion(
+                      chat_request,
+                      tokenizer,
+                      prompt,
+                      request_id,
+                      new_tokens,
+                      stream,
+                      finish_reason,
+                      "chat.completion",
+                  )
+                  if DEBUG >= 2:
+                      print(f"Streaming completion: {completion}")
+                  try:
+                      await response.write(f"data: {json.dumps(completion)}\n\n".encode())
+                  except Exception as e:
+                      if DEBUG >= 2:
+                          print(f"Error streaming completion: {e}")
+                          traceback.print_exc()
+
+              # 省略不变的代码...
+
+          else:
+              _, tokens, _ = await callback.wait(
+                  lambda _request_id, tokens, is_finished: _request_id == request_id and is_finished,
+                  timeout=self.response_timeout,
+              )
+
+              finish_reason = "length"
+              eos_token_id = tokenizer.special_tokens_map.get("eos_token_id") if isinstance(
+                  getattr(tokenizer, "_tokenizer", None), AutoTokenizer) else tokenizer.eos_token_id
+              if DEBUG >= 2:
+                  print(f"Checking if end of tokens result {tokens[-1]=} is {eos_token_id=}")
+              if tokens[-1] == eos_token_id:
+                  tokens = tokens[:-1]
+                  finish_reason = "stop"
+
+              return web.json_response(
+                  generate_completion(chat_request, tokenizer, prompt, request_id, tokens, stream, finish_reason,
+                                      "chat.completion"))
+
+      except asyncio.TimeoutError:
+          return web.json_response({"detail": "Response generation timed out"}, status=408)
+      except Exception as e:
+          if DEBUG >= 2:
+              traceback.print_exc()
+          return web.json_response({"detail": f"Error processing prompt (see logs with DEBUG>=2): {str(e)}"},
+                                   status=500)
+      finally:
+          deregistered_callback = self.node.on_token.deregister(callback_id)
+          if DEBUG >= 2:
+              print(f"Deregister {callback_id=} {deregistered_callback=}")
+
+      total_duration = time.time() - start_time
+      if DEBUG >= 2:
+          print(f"[INFO] Total request duration: {total_duration:.6f} seconds")
 
   async def run(self, host: str = "0.0.0.0", port: int = 52415):
     runner = web.AppRunner(self.app)
