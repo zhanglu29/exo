@@ -8,7 +8,7 @@ from exo.download.hf.hf_helpers import get_local_snapshot_dir
 from exo.helpers import DEBUG
 import inspect
 
-from exo.helpers import log_caller_info
+from exo.helpers import log_cost_info
 
 class DummyTokenizer:
   def __init__(self):
@@ -20,7 +20,7 @@ class DummyTokenizer:
   def decode(self, tokens):
     return "dummy"
 
-@log_caller_info
+@log_cost_info
 async def resolve_tokenizer(model_id: str):
   if model_id == "dummy":
     return DummyTokenizer()
@@ -37,7 +37,7 @@ async def resolve_tokenizer(model_id: str):
     if DEBUG >= 5: traceback.print_exc()
   return await _resolve_tokenizer(model_id)
 
-@log_caller_info
+@log_cost_info
 async def _resolve_tokenizer(model_id_or_local_path: Union[str, PathLike]):
   try:
     if DEBUG >= 4: print(f"Trying AutoProcessor for {model_id_or_local_path}")
