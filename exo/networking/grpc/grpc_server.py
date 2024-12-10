@@ -146,7 +146,7 @@ class GRPCServer(node_service_pb2_grpc.NodeServiceServicer):
         result = request.result
         is_finished = request.is_finished
         if DEBUG >= 5: print(
-            f"Received SendResult request: {request_id=} {result=} {result.shape=}, {result.dtype=} {is_finished=}")
+            f"Received SendResult request: {request_id=} {result=} {is_finished=}")
         self.node.on_token.trigger_all(request_id, result, is_finished)
         return node_service_pb2.Empty()
 
