@@ -4,41 +4,40 @@ import numpy as np
 from asyncio import CancelledError
 import sys
 import time
-import pickle
 
 from . import node_service_pb2
 from . import node_service_pb2_grpc
 from exo import DEBUG
 from exo.inference.shard import Shard
 from exo.orchestration import Node
-#
-# def log_execution_info(func):
-#     """装饰器，用于记录函数执行时间和参数字节大小"""
-#     async def wrapper(*args, **kwargs):
-#         # 计算参数字节大小
-#         args_size = sum(sys.getsizeof(arg) for arg in args)
-#         kwargs_size = sum(sys.getsizeof(key) + sys.getsizeof(value) for key, value in kwargs.items())
-#         total_size = args_size + kwargs_size
-#
-#         # 获取调用前时间
-#         start_time = time.time()
-#
-#         # 执行原始函数
-#         result = await func(*args, **kwargs)
-#
-#         # 获取调用后时间
-#         end_time = time.time()
-#
-#         # 计算时间差
-#         duration = end_time - start_time
-#
-#         # 打印日志
-#         print(f"[INFO] SERVER Function '{func.__name__}' executed in {duration:.6f} seconds. "
-#               f"Parameter size: {total_size} bytes.")
-#
-#         return result
-#
-#     return wrapper
+
+def log_execution_info(func):
+    """装饰器，用于记录函数执行时间和参数字节大小"""
+    async def wrapper(*args, **kwargs):
+        # 计算参数字节大小
+        args_size = sum(sys.getsizeof(arg) for arg in args)
+        kwargs_size = sum(sys.getsizeof(key) + sys.getsizeof(value) for key, value in kwargs.items())
+        total_size = args_size + kwargs_size
+
+        # 获取调用前时间
+        start_time = time.time()
+
+        # 执行原始函数
+        result = await func(*args, **kwargs)
+
+        # 获取调用后时间
+        end_time = time.time()
+
+        # 计算时间差
+        duration = end_time - start_time
+
+        # 打印日志
+        print(f"[INFO] SERVER Function '{func.__name__}' executed in {duration:.6f} seconds. "
+              f"Parameter size: {total_size} bytes.")
+
+        return result
+
+    return wrapper
 
 def log_execution_info(func):
     """装饰器，用于记录函数执行时间和参数字节大小"""
