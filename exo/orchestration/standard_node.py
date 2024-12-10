@@ -309,7 +309,7 @@ class StandardNode(Node):
       target_peer = next((p for p in self.peers if p.id() == target_id), None)
       if not target_peer:
         raise ValueError(f"Peer for {target_index} not found")
-      if DEBUG >= 1: print(f"Sending tensor to {target_peer.id()}: {tensor}")
+      if DEBUG >= 1: print(f"Sending tensor to {target_peer.id()}: {tensor} shape: {tensor.shape} dtype: {tensor.dtype}")
       await target_peer.send_tensor(next_shard, tensor, request_id=request_id)
 
   @log_caller_info

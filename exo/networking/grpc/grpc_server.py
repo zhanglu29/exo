@@ -4,19 +4,48 @@ import numpy as np
 from asyncio import CancelledError
 import sys
 import time
+import pickle
 
 from . import node_service_pb2
 from . import node_service_pb2_grpc
 from exo import DEBUG
 from exo.inference.shard import Shard
 from exo.orchestration import Node
+#
+# def log_execution_info(func):
+#     """装饰器，用于记录函数执行时间和参数字节大小"""
+#     async def wrapper(*args, **kwargs):
+#         # 计算参数字节大小
+#         args_size = sum(sys.getsizeof(arg) for arg in args)
+#         kwargs_size = sum(sys.getsizeof(key) + sys.getsizeof(value) for key, value in kwargs.items())
+#         total_size = args_size + kwargs_size
+#
+#         # 获取调用前时间
+#         start_time = time.time()
+#
+#         # 执行原始函数
+#         result = await func(*args, **kwargs)
+#
+#         # 获取调用后时间
+#         end_time = time.time()
+#
+#         # 计算时间差
+#         duration = end_time - start_time
+#
+#         # 打印日志
+#         print(f"[INFO] SERVER Function '{func.__name__}' executed in {duration:.6f} seconds. "
+#               f"Parameter size: {total_size} bytes.")
+#
+#         return result
+#
+#     return wrapper
 
 def log_execution_info(func):
     """装饰器，用于记录函数执行时间和参数字节大小"""
     async def wrapper(*args, **kwargs):
         # 计算参数字节大小
-        args_size = sum(sys.getsizeof(arg) for arg in args)
-        kwargs_size = sum(sys.getsizeof(key) + sys.getsizeof(value) for key, value in kwargs.items())
+        args_size = sum(len(pickle.dumps(arg)) for arg in args)
+        kwargs_size = sum(len(pickle.dumps(key)) + len(pickle.dumps(value)) for key, value in kwargs.items())
         total_size = args_size + kwargs_size
 
         # 获取调用前时间
@@ -84,8 +113,8 @@ class GRPCServer(node_service_pb2_grpc.NodeServiceServicer):
         prompt = request.prompt
         request_id = request.request_id
         result = await self.node.process_prompt(shard, prompt, request_id)
-        if DEBUG >= 5:
-            print(f"SendPrompt {shard=} {prompt=} {request_id=} result: {result}")
+        if DEBUG >= 5: print(
+            f"SendPrompt {shard=} {prompt=} {request_id=} result: {result} shap: {result.shape} dtype: {result.dtype}")
         tensor_data = result.tobytes() if result is not None else None
         return node_service_pb2.Tensor(tensor_data=tensor_data, shape=result.shape, dtype=str(result.dtype)) if result is not None else node_service_pb2.Tensor()
 
@@ -101,8 +130,8 @@ class GRPCServer(node_service_pb2_grpc.NodeServiceServicer):
         request_id = request.request_id
 
         result = await self.node.process_tensor(shard, tensor, request_id)
-        if DEBUG >= 5:
-            print(f"SendTensor tensor {shard=} {tensor=} {request_id=} result: {result}")
+        if DEBUG >= 5: print(
+            f"SendTensor tensor {shard=} {tensor=} {tensor} shape: {request.tensor.shape} result: {result}")
         tensor_data = result.tobytes() if result is not None else None
         return node_service_pb2.Tensor(tensor_data=tensor_data, shape=result.shape, dtype=str(result.dtype)) if result is not None else node_service_pb2.Tensor()
 
@@ -145,8 +174,8 @@ class GRPCServer(node_service_pb2_grpc.NodeServiceServicer):
         request_id = request.request_id
         result = request.result
         is_finished = request.is_finished
-        if DEBUG >= 5:
-            print(f"Received SendResult request: {request_id=} {result=} {is_finished=}")
+        if DEBUG >= 5: print(
+            f"Received SendResult request: {request_id=} {result=} {result.shape=}, {result.dtype=} {is_finished=}")
         self.node.on_token.trigger_all(request_id, result, is_finished)
         return node_service_pb2.Empty()
 
