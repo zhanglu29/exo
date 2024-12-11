@@ -39,13 +39,15 @@ from exo.orchestration import Node
 #     return wrapper
 
 def get_object_size(obj):
-    """递归计算对象的字节大小，包括多层引用"""
+    """递归计算对象的字节大小，包括多层引用和 NumPy 数组"""
     if isinstance(obj, (str, bytes)):
         return len(obj)
     elif isinstance(obj, (list, tuple, set)):
         return sum(get_object_size(item) for item in obj)
     elif isinstance(obj, dict):
         return sum(get_object_size(key) + get_object_size(value) for key, value in obj.items())
+    elif isinstance(obj, np.ndarray):
+        return obj.nbytes  # NumPy 数组的实际字节数
     else:
         return sys.getsizeof(obj)
 
