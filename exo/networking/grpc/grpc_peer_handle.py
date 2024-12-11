@@ -49,18 +49,25 @@ import asyncio
 #     return wrapper
 
 
-def get_object_size(obj):
+def get_object_size(obj, seen=None):
     """递归计算对象的字节大小，包括多层引用和 NumPy 数组"""
+    if seen is None:
+        seen = set()  # 用于跟踪已访问的对象
+
+    if id(obj) in seen:  # 检查是否已经访问过该对象
+        return 0
+    seen.add(id(obj))  # 标记该对象为已访问
+
     if isinstance(obj, (str, bytes)):
         return len(obj)
     elif isinstance(obj, (list, tuple, set)):
-        return sum(get_object_size(item) for item in obj)
+        return sum(get_object_size(item, seen) for item in obj)
     elif isinstance(obj, dict):
-        return sum(get_object_size(key) + get_object_size(value) for key, value in obj.items())
+        return sum(get_object_size(key, seen) + get_object_size(value, seen) for key, value in obj.items())
     elif isinstance(obj, np.ndarray):
         return obj.nbytes  # NumPy 数组的实际字节数
     elif hasattr(obj, '__dict__'):  # 如果对象有属性字典
-        return get_object_size(obj.__dict__)  # 递归计算所有属性的大小
+        return get_object_size(obj.__dict__, seen)  # 递归计算所有属性的大小
     else:
         return sys.getsizeof(obj)
 
