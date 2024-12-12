@@ -177,10 +177,33 @@ def mac_device_capabilities() -> DeviceCapabilities:
   # Assuming static values for other attributes for demonstration
   return DeviceCapabilities(model=model_id, chip=chip_id, memory=memory, flops=CHIP_FLOPS.get(chip_id, DeviceFlops(fp32=0, fp16=0, int8=0)))
 
+def get_android_gpu_info():
+  """获取 Android 设备的 GPU 信息"""
+  try:
+    # 使用 adb shell 命令获取 GPU 信息
+    result = subprocess.run(['getprop', 'ro.opengles.version'], capture_output=True, text=True)
+    if result.returncode == 0:
+      gpu_version = result.stdout.strip()
+      return f"Android GPU (OpenGL ES Version: {gpu_version})"
+  except Exception as e:
+    if DEBUG >= 2:
+      print(f"Error getting Android GPU info: {e}")
+  return "Unknown Android GPU"
 
 def linux_device_capabilities() -> DeviceCapabilities:
   import psutil
   from tinygrad import Device
+
+  # 检查 Android GPU
+  android_gpu_info = get_android_gpu_info()
+
+  if android_gpu_info != "Unknown Android GPU":
+    return DeviceCapabilities(
+      model="Android Device",
+      chip=android_gpu_info,
+      memory=psutil.virtual_memory().total // 2 ** 20,
+      flops=DeviceFlops(fp32=100, fp16=200, int8=400)  # Placeholder values
+    )
 
   if DEBUG >= 2: print(f"tinygrad {Device.DEFAULT=}")
   if Device.DEFAULT == "CUDA" or Device.DEFAULT == "NV" or Device.DEFAULT == "GPU":
