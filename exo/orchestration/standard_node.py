@@ -346,8 +346,8 @@ class StandardNode(Node):
     def _pretty(peers: List[PeerHandle]) -> List[str]:
       return [f"{peer.id()}@{peer.addr()}" for peer in peers]
 
-    if DEBUG >= 2:
-      print(f"update_peers: added={peers_added} removed={peers_removed} updated={peers_updated} unchanged={peers_unchanged} to_disconnect={peers_to_disconnect} to_connect={peers_to_connect}")
+    # if DEBUG >= 2:
+      # print(f"update_peers: added={peers_added} removed={peers_removed} updated={peers_updated} unchanged={peers_unchanged} to_disconnect={peers_to_disconnect} to_connect={peers_to_connect}")
 
     async def disconnect_with_timeout(peer, timeout=5):
       try:
@@ -394,7 +394,7 @@ class StandardNode(Node):
       await asyncio.sleep(interval)
       try:
         did_peers_change = await self.update_peers()
-        if DEBUG >= 2: print(f"{did_peers_change=}")
+        # if DEBUG >= 2: print(f"{did_peers_change=}")
         if did_peers_change:
           await self.collect_topology()
           await self.select_best_inference_engine()

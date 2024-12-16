@@ -202,7 +202,7 @@ class ChatGPTAPI:
 
   async def log_request(self, app, handler):
     async def middleware(request):
-      if DEBUG >= 2: print(f"Received request: {request.method} {request.path}")
+      # if DEBUG >= 2: print(f"Received request: {request.method} {request.path}")
       return await handler(request)
 
     return middleware
