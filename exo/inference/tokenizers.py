@@ -37,14 +37,7 @@ async def resolve_tokenizer(model_id: str):
 
 
 async def _resolve_tokenizer(model_id_or_local_path: Union[str, PathLike]):
-  proxies = {
-    "http": "http://192.168.88.110:7890",
-    "https": "https://192.168.88.110:7890",
-  }
-
-  session = requests.Session()
-  session.proxies.update(proxies)
-
+  
   try:
     if DEBUG >= 4: print(f"Trying AutoProcessor for {model_id_or_local_path}")
     processor = AutoProcessor.from_pretrained(model_id_or_local_path, use_fast=True if "Mistral-Large" in f"{model_id_or_local_path}" else False, trust_remote_code=True)
