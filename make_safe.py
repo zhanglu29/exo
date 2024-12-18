@@ -3,7 +3,7 @@ import json
 from safetensors import safe_open
 
 # 配置模型路径
-model_path = "/root/.cache/huggingface/hub/models--unsloth--Llama-3.2-1/snapshots/50ea995812f20bf680a17a02cfbc4f90ff4d9c0e"
+model_path = "/root/.cache/huggingface/hub/models--unsloth--Llama-3.2-3B-Instruct/snapshots/bc836a93eabc97432d7be9faedddf045ca7ad8fc"
 output_file = os.path.join(model_path, "model.safetensors.index.json")
 
 # 遍历 safetensors 文件
